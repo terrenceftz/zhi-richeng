@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as tasksService from '../services/tasks.service';
+import * as llmService from '../services/llm.service';
 
 export async function getTasks(req: Request, res: Response, next: NextFunction) {
   try {
@@ -74,6 +75,38 @@ export async function reorder(req: Request, res: Response, next: NextFunction) {
     const tasks = await tasksService.reorderTasks(req.userId!, orderedIds);
     res.json({ tasks });
   } catch (err) {
+    next(err);
+  }
+}
+
+export async function parseNLP(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { text } = req.body;
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ message: '缺少 text 字段' });
+    }
+    const parsed = await llmService.parseTask(text);
+    res.json({ parsed, confirmed: false });
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return res.status(422).json({ message: 'LLM 解析失败，请尝试更明确的表达' });
+    }
+    next(err);
+  }
+}
+
+export async function extractNLP(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { text } = req.body;
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ message: '缺少 text 字段' });
+    }
+    const result = await llmService.extractTasks(text);
+    res.json({ tasks: result.tasks, confirmed: false });
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return res.status(422).json({ message: '文档解析失败，请检查内容格式' });
+    }
     next(err);
   }
 }
