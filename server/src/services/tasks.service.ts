@@ -1,15 +1,16 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Prisma } from '@prisma/client';
+import prisma from '../db';
 
 export interface CreateTaskInput {
   title: string;
   description?: string;
+  location?: string;
   status?: string;
   priority?: string;
   category?: string;
   dueDate?: string;
   dueTime?: string;
+  remind?: boolean;
   tags?: string[];
   parentId?: string;
 }
@@ -23,6 +24,23 @@ export interface TaskFilters {
   category?: string;
 }
 
+// SQLite stores tags as JSON string; parse to array for API response
+function parseTags(task: any) {
+  if (typeof task.tags === 'string') {
+    try { task.tags = JSON.parse(task.tags); } catch { task.tags = []; }
+  }
+  if (task.children) task.children.forEach(parseTags);
+  return task;
+}
+
+function parseTagsList(tasks: any[]) {
+  return tasks.map(parseTags);
+}
+
+function stringifyTags(tags?: string[]): string {
+  return JSON.stringify(tags || []);
+}
+
 export async function getTasks(userId: string, filters: TaskFilters) {
   const where: Prisma.TaskWhereInput = { userId };
 
@@ -34,11 +52,12 @@ export async function getTasks(userId: string, filters: TaskFilters) {
     where.dueDate = { equals: d };
   }
 
-  return prisma.task.findMany({
+  const tasks = await prisma.task.findMany({
     where,
     orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     include: { children: true },
   });
+  return parseTagsList(tasks);
 }
 
 export async function getTaskById(userId: string, taskId: string) {
@@ -47,29 +66,32 @@ export async function getTaskById(userId: string, taskId: string) {
     include: { children: true },
   });
   if (!task) throw Object.assign(new Error('任务不存在'), { statusCode: 404 });
-  return task;
+  return parseTags(task);
 }
 
 export async function createTask(userId: string, input: CreateTaskInput) {
   const maxOrder = await prisma.task.aggregate({ where: { userId }, _max: { sortOrder: true } });
   const sortOrder = (maxOrder._max.sortOrder ?? -1) + 1;
 
-  return prisma.task.create({
+  const task = await prisma.task.create({
     data: {
       userId,
       title: input.title,
       description: input.description || null,
+      location: input.location || null,
       status: input.status || 'todo',
       priority: input.priority || 'medium',
       category: input.category || null,
       dueDate: input.dueDate ? new Date(input.dueDate) : null,
       dueTime: input.dueTime || null,
-      tags: input.tags || [],
+      remind: input.remind !== undefined ? input.remind : true,
+      tags: stringifyTags(input.tags),
       parentId: input.parentId || null,
       sortOrder,
     },
     include: { children: true },
   });
+  return parseTags(task);
 }
 
 export async function createTasksBatch(userId: string, inputs: CreateTaskInput[]) {
@@ -88,11 +110,11 @@ export async function createTasksBatch(userId: string, inputs: CreateTaskInput[]
         category: input.category || null,
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
         dueTime: input.dueTime || null,
-        tags: input.tags || [],
+        tags: stringifyTags(input.tags),
         sortOrder: nextOrder++,
       },
     });
-    tasks.push(task);
+    tasks.push(parseTags(task));
   }
   return tasks;
 }
@@ -101,13 +123,15 @@ export async function updateTask(userId: string, taskId: string, input: UpdateTa
   await getTaskById(userId, taskId);
 
   const data: any = { ...input };
+  if (input.tags !== undefined) data.tags = stringifyTags(input.tags);
   if (input.dueDate !== undefined) data.dueDate = input.dueDate ? new Date(input.dueDate) : null;
   delete data.id;
   delete data.userId;
   delete data.createdAt;
   delete data.updatedAt;
 
-  return prisma.task.update({ where: { id: taskId }, data, include: { children: true } });
+  const task = await prisma.task.update({ where: { id: taskId }, data, include: { children: true } });
+  return parseTags(task);
 }
 
 export async function deleteTask(userId: string, taskId: string) {
@@ -117,7 +141,8 @@ export async function deleteTask(userId: string, taskId: string) {
 
 export async function updateTaskStatus(userId: string, taskId: string, status: string) {
   await getTaskById(userId, taskId);
-  return prisma.task.update({ where: { id: taskId }, data: { status } });
+  const task = await prisma.task.update({ where: { id: taskId }, data: { status } });
+  return parseTags(task);
 }
 
 export async function reorderTasks(userId: string, orderedIds: string[]) {

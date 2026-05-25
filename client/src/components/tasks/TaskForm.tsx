@@ -13,16 +13,18 @@ interface TaskFormProps {
 export default function TaskForm({ initial, onSubmit, onCancel, isLoading }: TaskFormProps) {
   const [title, setTitle] = useState(initial?.title || '');
   const [description, setDescription] = useState(initial?.description || '');
+  const [location, setLocation] = useState(initial?.location || '');
   const [priority, setPriority] = useState(initial?.priority || 'medium');
   const [category, setCategory] = useState(initial?.category || '通用');
   const [dueDate, setDueDate] = useState(initial?.dueDate || '');
   const [dueTime, setDueTime] = useState(initial?.dueTime || '');
   const [status, setStatus] = useState(initial?.status || 'todo');
+  const [remind, setRemind] = useState(initial?.remind !== undefined ? initial.remind : true);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    await onSubmit({ title: title.trim(), description: description.trim() || undefined, priority: priority as Task['priority'], category, dueDate: dueDate || undefined, dueTime: dueTime || undefined, status: status as Task['status'] });
+    await onSubmit({ title: title.trim(), description: description.trim() || undefined, location: location.trim() || undefined, priority: priority as Task['priority'], category, dueDate: dueDate || undefined, dueTime: dueTime || undefined, remind, status: status as Task['status'] });
   };
 
   return (
@@ -31,13 +33,14 @@ export default function TaskForm({ initial, onSubmit, onCancel, isLoading }: Tas
       <div>
         <label className="block text-sm text-muted mb-1">备注</label>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="添加备注..."
-          className="w-full bg-surface-light border border-[#353560] rounded-lg px-4 py-2.5 text-white placeholder-muted focus:outline-none focus:border-primary transition-colors resize-none h-20 text-sm" />
+          className="w-full bg-surface-light border border-border-light rounded-lg px-4 py-2.5 text-text placeholder-muted focus:outline-none focus:border-primary transition-colors resize-none h-20 text-sm" />
       </div>
+      <Input label="地点" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="会议室、线上链接等" />
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-sm text-muted mb-1">优先级</label>
           <select value={priority} onChange={(e) => setPriority(e.target.value)}
-            className="w-full bg-surface-light border border-[#353560] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-primary">
+            className="w-full bg-surface-light border border-border-light rounded-lg px-3 py-2.5 text-text text-sm focus:outline-none focus:border-primary">
             <option value="high">高</option>
             <option value="medium">中</option>
             <option value="low">低</option>
@@ -46,7 +49,7 @@ export default function TaskForm({ initial, onSubmit, onCancel, isLoading }: Tas
         <div>
           <label className="block text-sm text-muted mb-1">类型</label>
           <select value={category} onChange={(e) => setCategory(e.target.value)}
-            className="w-full bg-surface-light border border-[#353560] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-primary">
+            className="w-full bg-surface-light border border-border-light rounded-lg px-3 py-2.5 text-text text-sm focus:outline-none focus:border-primary">
             <option value="通用">通用</option>
             <option value="资料收集">资料收集</option>
             <option value="审核">审核</option>
@@ -56,18 +59,31 @@ export default function TaskForm({ initial, onSubmit, onCancel, isLoading }: Tas
         <div>
           <label className="block text-sm text-muted mb-1">日期</label>
           <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
-            className="w-full bg-surface-light border border-[#353560] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-primary" />
+            className="w-full bg-surface-light border border-border-light rounded-lg px-3 py-2.5 text-text text-sm focus:outline-none focus:border-primary" />
         </div>
         <div>
           <label className="block text-sm text-muted mb-1">时间</label>
           <input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)}
-            className="w-full bg-surface-light border border-[#353560] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-primary" />
+            className="w-full bg-surface-light border border-border-light rounded-lg px-3 py-2.5 text-text text-sm focus:outline-none focus:border-primary" />
         </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-text">飞书提醒</p>
+          <p className="text-xs text-muted">{remind ? '会在截止时间通过飞书通知你' : '不发送提醒通知'}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setRemind(!remind)}
+          className={`w-10 h-5 rounded-full transition-colors relative ${remind ? 'bg-primary' : 'bg-surface-dark'}`}
+        >
+          <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${remind ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        </button>
       </div>
       <div>
         <label className="block text-sm text-muted mb-1">状态</label>
         <select value={status} onChange={(e) => setStatus(e.target.value)}
-          className="w-full bg-surface-light border border-[#353560] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-primary">
+          className="w-full bg-surface-light border border-border-light rounded-lg px-3 py-2.5 text-text text-sm focus:outline-none focus:border-primary">
           <option value="todo">待办</option>
           <option value="in_progress">进行中</option>
           <option value="done">完成</option>

@@ -11,7 +11,11 @@ export async function register(req: Request, res: Response, next: NextFunction) 
       return res.status(400).json({ message: '密码长度至少6位' });
     }
     const result = await authService.register({ email, password, name });
-    res.status(201).json(result);
+    res.status(201).json({
+      user: result.user,
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
+    });
   } catch (err) {
     next(err);
   }
@@ -24,7 +28,11 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       return res.status(400).json({ message: '缺少必填字段：email, password' });
     }
     const result = await authService.login({ email, password });
-    res.json(result);
+    res.json({
+      user: result.user,
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
+    });
   } catch (err) {
     next(err);
   }

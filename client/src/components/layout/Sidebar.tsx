@@ -5,6 +5,8 @@ import ThemeToggle from '../ui/ThemeToggle';
 const navItems = [
   { to: '/', label: '今日概览', icon: '📋' },
   { to: '/calendar', label: '日历', icon: '📅' },
+  { to: '/inspiration', label: '灵感', icon: '💡' },
+  { to: '/settings', label: '设置', icon: '⚙️' },
 ];
 
 export default function Sidebar() {
@@ -17,7 +19,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 h-screen bg-surface border-r border-[#252547] flex flex-col fixed left-0 top-0 z-40">
+    <aside className="w-64 h-screen bg-surface border-r border-border flex flex-col fixed left-0 top-0 z-40">
       <div className="p-6">
         <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           智日程
@@ -34,7 +36,7 @@ export default function Sidebar() {
               `flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${
                 isActive
                   ? 'bg-primary/20 text-primary font-medium'
-                  : 'text-muted hover:text-white hover:bg-surface-light'
+                  : 'text-muted hover:text-text hover:bg-surface-light'
               }`
             }
           >
@@ -44,13 +46,13 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-[#252547] space-y-3">
+      <div className="p-4 border-t border-border space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xs font-bold">
               {user?.name?.charAt(0) || 'U'}
             </div>
-            <span className="text-sm text-white truncate">{user?.name || '用户'}</span>
+            <span className="text-sm text-text truncate">{user?.name || '用户'}</span>
           </div>
           <ThemeToggle />
         </div>

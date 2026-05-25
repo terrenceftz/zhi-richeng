@@ -5,12 +5,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#7c3aed', light: '#a78bfa', dark: '#5b21b6' },
-        accent: { DEFAULT: '#e2b714', light: '#f0d760', dark: '#b8920f' },
-        surface: { DEFAULT: '#1a1a2e', light: '#252547', dark: '#0f0f1a' },
-        danger: '#f7768e',
-        info: '#7aa2f7',
-        muted: '#565f89',
+        primary: {
+          DEFAULT: 'var(--color-primary)',
+          light: 'var(--color-primary-light)',
+          dark: 'var(--color-primary-dark)',
+        },
+        accent: {
+          DEFAULT: 'var(--color-accent)',
+          light: 'var(--color-accent-light)',
+          dark: 'var(--color-accent-dark)',
+        },
+        surface: {
+          DEFAULT: 'var(--color-surface)',
+          light: 'var(--color-surface-light)',
+          dark: 'var(--color-surface-dark)',
+        },
+        danger: 'var(--color-danger)',
+        info: 'var(--color-info)',
+        muted: 'var(--color-muted)',
+        text: 'var(--color-text)',
+        border: {
+          DEFAULT: 'var(--color-border)',
+          light: 'var(--color-border-light)',
+        },
       },
       fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
     },

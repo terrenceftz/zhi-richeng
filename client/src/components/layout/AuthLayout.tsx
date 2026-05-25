@@ -10,7 +10,7 @@ export default function AuthLayout() {
           </h1>
           <p className="text-muted mt-2">智能管理你的每一天</p>
         </div>
-        <div className="bg-surface border border-[#353560] rounded-2xl p-8">
+        <div className="bg-surface border border-border-light rounded-2xl p-8">
           <Outlet />
         </div>
       </div>

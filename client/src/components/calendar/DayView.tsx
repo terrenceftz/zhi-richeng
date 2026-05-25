@@ -11,7 +11,7 @@ const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
 
 export default function DayView({ date, tasks, onTaskClick }: DayViewProps) {
   const dayTasks = useMemo(
-    () => tasks.filter((t) => t.dueDate === date).sort((a, b) => (a.dueTime || '').localeCompare(b.dueTime || '')),
+    () => tasks.filter((t) => t.dueDate?.slice(0, 10) === date).sort((a, b) => (a.dueTime || '').localeCompare(b.dueTime || '')),
     [tasks, date]
   );
 
@@ -26,7 +26,7 @@ export default function DayView({ date, tasks, onTaskClick }: DayViewProps) {
             const hourStr = `${String(hour).padStart(2, '0')}:00`;
             const hourTasks = dayTasks.filter((t) => t.dueTime && t.dueTime.startsWith(String(hour).padStart(2, '0')));
             return (
-              <div key={hour} className="flex border-t border-[#252547] min-h-[56px]">
+              <div key={hour} className="flex border-t border-border min-h-[56px]">
                 <div className="w-16 text-xs text-muted py-3 flex-shrink-0">{hourStr}</div>
                 <div className="flex-1 py-1 space-y-1">
                   {hourTasks.map((task) => (

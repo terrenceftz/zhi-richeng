@@ -37,6 +37,11 @@ export async function updateTaskStatus(id: string, status: string): Promise<Task
   return data.task;
 }
 
+export async function decomposeTask(id: string): Promise<Task[]> {
+  const { data } = await client.post(`/tasks/${id}/decompose`);
+  return data.subtasks;
+}
+
 export async function reorderTasks(orderedIds: string[]): Promise<Task[]> {
   const { data } = await client.patch('/tasks/reorder', { orderedIds });
   return data.tasks;

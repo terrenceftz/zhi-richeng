@@ -46,7 +46,7 @@ export default function CalendarPage() {
             <button
               key={key}
               onClick={() => setViewMode(key)}
-              className={`px-4 py-1.5 text-sm rounded-lg transition-all ${viewMode === key ? 'bg-primary text-white font-medium' : 'text-muted hover:text-white'}`}
+              className={`px-4 py-1.5 text-sm rounded-lg transition-all ${viewMode === key ? 'bg-primary text-white font-medium' : 'text-muted hover:text-text'}`}
             >
               {label}
             </button>
@@ -54,7 +54,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <div className="bg-surface border border-[#252547] rounded-2xl p-6">
+      <div className="bg-surface border border-border rounded-2xl p-6">
         {viewMode === 'day' && <DayView date={selectedDate} tasks={tasks} onTaskClick={handleTaskClick} />}
         {viewMode === 'week' && <WeekView selectedDate={selectedDate} tasks={tasks} onTaskClick={handleTaskClick} />}
         {viewMode === 'month' && (

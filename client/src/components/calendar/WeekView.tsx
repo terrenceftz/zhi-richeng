@@ -35,7 +35,7 @@ export default function WeekView({ selectedDate, tasks, onTaskClick }: WeekViewP
       </div>
       <div className="grid grid-cols-7 gap-2">
         {dates.map((date) => {
-          const dayTasks = tasks.filter((t) => t.dueDate === date);
+          const dayTasks = tasks.filter((t) => t.dueDate?.slice(0, 10) === date);
           return (
             <div key={date} className="min-h-[120px] bg-surface-light rounded-lg p-2 space-y-1">
               {dayTasks.slice(0, 3).map((task) => (

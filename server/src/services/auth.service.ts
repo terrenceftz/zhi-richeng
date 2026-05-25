@@ -1,9 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../db';
 import { v4 as uuid } from 'uuid';
 import { hashPassword, comparePassword } from '../utils/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt';
 
-const prisma = new PrismaClient();
 
 export interface RegisterInput {
   email: string;

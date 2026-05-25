@@ -31,6 +31,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const result = await authApi.login(email, password);
       localStorage.setItem('accessToken', result.accessToken);
       localStorage.setItem('refreshToken', result.refreshToken);
+      localStorage.setItem('user', JSON.stringify(result.user));
       set({
         user: result.user,
         accessToken: result.accessToken,
@@ -50,6 +51,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const result = await authApi.register(email, password, name);
       localStorage.setItem('accessToken', result.accessToken);
       localStorage.setItem('refreshToken', result.refreshToken);
+      localStorage.setItem('user', JSON.stringify(result.user));
       set({
         user: result.user,
         accessToken: result.accessToken,
@@ -70,6 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
     set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
   },
 
@@ -78,8 +81,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   hydrate: () => {
     const accessToken = localStorage.getItem('accessToken');
     const refreshToken = localStorage.getItem('refreshToken');
+    const userJson = localStorage.getItem('user');
+    const user = userJson ? JSON.parse(userJson) : null;
     if (accessToken && refreshToken) {
-      set({ accessToken, refreshToken, isAuthenticated: true });
+      set({ accessToken, refreshToken, user, isAuthenticated: true });
     }
   },
 }));
