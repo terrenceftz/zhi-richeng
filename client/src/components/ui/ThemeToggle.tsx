@@ -6,7 +6,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggle}
-      className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface-light hover:bg-[#353560] transition-colors"
+      className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface-light hover:bg-surface-dark transition-colors"
       title={theme === 'dark' ? '切换亮色模式' : '切换暗黑模式'}
     >
       {theme === 'dark' ? (

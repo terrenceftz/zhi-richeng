@@ -10,7 +10,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, classNam
     {label && <label className="block text-sm text-muted mb-1">{label}</label>}
     <input
       ref={ref}
-      className={`w-full bg-surface-light border border-[#353560] rounded-lg px-4 py-2.5 text-white placeholder-muted focus:outline-none focus:border-primary transition-colors ${error ? 'border-danger' : ''} ${className}`}
+      className={`w-full bg-surface-light border border-border-light rounded-lg px-4 py-2.5 text-text placeholder-muted focus:outline-none focus:border-primary transition-colors ${error ? 'border-danger' : ''} ${className}`}
       {...props}
     />
     {error && <p className="text-danger text-xs mt-1">{error}</p>}

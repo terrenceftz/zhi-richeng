@@ -24,9 +24,10 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
   const tasksByDate = useMemo(() => {
     const map: Record<string, Task[]> = {};
     tasks.forEach((t) => {
-      if (t.dueDate) {
-        if (!map[t.dueDate]) map[t.dueDate] = [];
-        map[t.dueDate].push(t);
+      const dk = t.dueDate?.slice(0, 10);
+      if (dk) {
+        if (!map[dk]) map[dk] = [];
+        map[dk].push(t);
       }
     });
     return map;

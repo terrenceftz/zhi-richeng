@@ -27,7 +27,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
             onClick={onClose}
           />
           <motion.div
-            className="relative bg-surface border border-[#353560] rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl"
+            className="relative bg-surface border border-border-light rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl"
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}

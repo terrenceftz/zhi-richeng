@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import Button from '../components/ui/Button';
@@ -8,10 +8,16 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { register, isLoading, error, clearError, hydrate } = useAuthStore();
+  const { register, isLoading, error, clearError, hydrate, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
-  hydrate();
+  useEffect(() => {
+    hydrate();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) navigate('/', { replace: true });
+  }, [isAuthenticated]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

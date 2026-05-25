@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, NavLink } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
 export default function AppLayout() {
@@ -8,13 +8,13 @@ export default function AppLayout() {
       <main className="flex-1 ml-64 p-6 lg:p-8 max-md:ml-0 max-md:pb-20">
         <Outlet />
       </main>
-      <nav className="hidden max-md:flex fixed bottom-0 left-0 right-0 bg-surface border-t border-[#252547] z-40 justify-around py-2">
-        <a href="/" className="flex flex-col items-center text-xs text-muted hover:text-primary px-4 py-1">
+      <nav className="hidden max-md:flex fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-40 justify-around py-2">
+        <NavLink to="/" end className={({ isActive }) => `flex flex-col items-center text-xs px-4 py-1 ${isActive ? 'text-primary' : 'text-muted'}`}>
           <span className="text-lg">📋</span>概览
-        </a>
-        <a href="/calendar" className="flex flex-col items-center text-xs text-muted hover:text-primary px-4 py-1">
+        </NavLink>
+        <NavLink to="/calendar" className={({ isActive }) => `flex flex-col items-center text-xs px-4 py-1 ${isActive ? 'text-primary' : 'text-muted'}`}>
           <span className="text-lg">📅</span>日历
-        </a>
+        </NavLink>
       </nav>
     </div>
   );

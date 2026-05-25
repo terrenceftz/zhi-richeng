@@ -65,13 +65,23 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     set({ tasks });
   },
 
-  parseNLP: (text) => tasksApi.parseNLP(text).then((r) => r.parsed),
+  parseNLP: async (text) => {
+    const r = await tasksApi.parseNLP(text);
+    return r.parsed;
+  },
 
   extractNLP: (text) => tasksApi.extractNLP(text),
 
   confirmNLP: async (tasks) => {
-    const result = await tasksApi.confirmNLP(tasks);
-    set({ tasks: [...get().tasks, ...result.tasks] });
+    set({ error: null });
+    try {
+      const result = await tasksApi.confirmNLP(tasks);
+      set({ tasks: [...get().tasks, ...result.tasks] });
+    } catch (err: any) {
+      const msg = err.response?.data?.message || '保存任务失败';
+      set({ error: msg });
+      throw err;
+    }
   },
 
   setSelectedDate: (date) => set({ selectedDate: date }),

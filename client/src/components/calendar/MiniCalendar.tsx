@@ -24,7 +24,7 @@ export default function MiniCalendar({ onDateSelect }: MiniCalendarProps) {
   const datesWithTasks = useMemo(() => {
     const set = new Set<string>();
     tasks.forEach((t) => {
-      if (t.dueDate) set.add(t.dueDate);
+      if (t.dueDate) set.add(t.dueDate.slice(0, 10));
     });
     return set;
   }, [tasks]);
@@ -44,18 +44,22 @@ export default function MiniCalendar({ onDateSelect }: MiniCalendarProps) {
   };
 
   const changeMonth = (delta: number) => {
-    const d = new Date(year, month - 1 + delta, 1);
-    setSelectedDate(d.toISOString().slice(0, 10));
+    const newMonth = month + delta;
+    const d = new Date(year, newMonth - 1, 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    setSelectedDate(`${y}-${m}-${day}`);
   };
 
   const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
   return (
-    <div className="bg-surface border border-[#252547] rounded-xl p-4">
+    <div className="bg-surface border border-border rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => changeMonth(-1)} className="text-muted hover:text-white text-sm">&lt;</button>
+        <button onClick={() => changeMonth(-1)} className="text-muted hover:text-text text-sm">&lt;</button>
         <span className="text-sm font-medium">{year}年{month}月</span>
-        <button onClick={() => changeMonth(1)} className="text-muted hover:text-white text-sm">&gt;</button>
+        <button onClick={() => changeMonth(1)} className="text-muted hover:text-text text-sm">&gt;</button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center">
         {weekDays.map((d) => (
@@ -71,7 +75,7 @@ export default function MiniCalendar({ onDateSelect }: MiniCalendarProps) {
                     ? 'bg-primary text-white font-bold'
                     : isToday(d)
                     ? 'bg-accent/20 text-accent font-bold'
-                    : 'text-white hover:bg-surface-light'
+                    : 'text-text hover:bg-surface-light'
                 }`}
               >
                 {d}

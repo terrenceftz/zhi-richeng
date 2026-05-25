@@ -10,11 +10,13 @@ export interface Task {
   userId: string;
   title: string;
   description?: string;
+  location?: string;
   status: 'todo' | 'in_progress' | 'done';
   priority: 'high' | 'medium' | 'low';
   category?: string;
   dueDate?: string;
   dueTime?: string;
+  remind?: boolean;
   tags: string[];
   parentId?: string;
   children?: Task[];
@@ -29,6 +31,10 @@ export interface ParsedTask {
   dueTime: string | null;
   priority: 'high' | 'medium' | 'low';
   category?: string;
+  location?: string;
+  emailTo?: string;
+  emailSubject?: string;
+  description?: string;
   tags: string[];
 }
 

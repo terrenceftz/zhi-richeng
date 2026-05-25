@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Task } from '../../types';
 import { useTaskStore } from '../../stores/taskStore';
 import TaskForm from './TaskForm';
 import Button from '../ui/Button';
+import * as tasksApi from '../../api/tasks';
 
 interface TaskDetailDrawerProps {
   task: Task | null;
@@ -12,6 +14,7 @@ interface TaskDetailDrawerProps {
 
 export default function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps) {
   const { updateTask, deleteTask, fetchTasks } = useTaskStore();
+  const [decomposing, setDecomposing] = useState(false);
 
   if (!task) return null;
 
@@ -28,6 +31,19 @@ export default function TaskDetailDrawer({ task, open, onClose }: TaskDetailDraw
     await fetchTasks();
   };
 
+  const handleDecompose = async () => {
+    setDecomposing(true);
+    try {
+      await tasksApi.decomposeTask(task.id);
+      onClose();
+      await fetchTasks();
+    } catch {
+      alert('拆解失败，请重试');
+    } finally {
+      setDecomposing(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -40,7 +56,7 @@ export default function TaskDetailDrawer({ task, open, onClose }: TaskDetailDraw
             onClick={onClose}
           />
           <motion.div
-            className="fixed right-0 top-0 h-full w-full max-w-md bg-surface border-l border-[#252547] z-50 overflow-y-auto"
+            className="fixed right-0 top-0 h-full w-full max-w-md bg-surface border-l border-border z-50 overflow-y-auto"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -49,10 +65,13 @@ export default function TaskDetailDrawer({ task, open, onClose }: TaskDetailDraw
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold">任务详情</h2>
-                <button onClick={onClose} className="text-muted hover:text-white text-xl">&times;</button>
+                <button onClick={onClose} className="text-muted hover:text-text text-xl">&times;</button>
               </div>
               <TaskForm initial={task} onSubmit={handleUpdate} onCancel={onClose} />
-              <div className="mt-6 pt-6 border-t border-[#252547]">
+              <div className="mt-6 pt-6 border-t border-border space-y-3">
+                <Button variant="secondary" onClick={handleDecompose} disabled={decomposing} className="w-full">
+                  {decomposing ? '拆解中...' : '🔧 AI 拆解为子任务'}
+                </Button>
                 <Button variant="danger" onClick={handleDelete} className="w-full">删除任务</Button>
               </div>
             </div>

@@ -23,6 +23,20 @@ export default function TaskCard({ task, onClick, compact }: TaskCardProps) {
     updateStatus(task.id, statusCycle[task.status]);
   };
 
+  const isHigh = task.priority === 'high' && task.status !== 'done';
+  const desc = task.description || '';
+
+  // Extract email info lines for card display
+  const emailLines: string[] = [];
+  if (desc) {
+    const lines = desc.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('📧') || line.startsWith('📋') || line.startsWith('📎')) {
+        emailLines.push(line.replace(/^[📧📋📎]\s*/, ''));
+      }
+    }
+  }
+
   return (
     <motion.div
       layout
@@ -30,7 +44,9 @@ export default function TaskCard({ task, onClick, compact }: TaskCardProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       onClick={onClick}
-      className={`bg-surface-light border border-[#252547] rounded-xl p-3 cursor-pointer hover:border-primary/50 transition-colors group ${task.status === 'done' ? 'opacity-60' : ''}`}
+      className={`bg-surface-light border rounded-xl p-3 cursor-pointer hover:border-primary/50 transition-all group ${
+        task.status === 'done' ? 'opacity-60 border-border' : ''
+      } ${isHigh ? 'border-danger/40 shadow-[0_0_10px_rgba(247,118,142,0.12)] bg-danger/5' : 'border-border'}`}
     >
       <div className="flex items-start gap-3">
         <button
@@ -42,9 +58,17 @@ export default function TaskCard({ task, onClick, compact }: TaskCardProps) {
           }}
         />
         <div className="flex-1 min-w-0">
-          <p className={`text-sm ${task.status === 'done' ? 'line-through text-muted' : 'text-white'}`}>
+          <p className={`text-sm flex items-center gap-1.5 ${task.status === 'done' ? 'line-through text-muted' : 'text-text'} ${isHigh ? 'font-semibold' : ''}`}>
+            {isHigh && <span className="text-xs flex-shrink-0">🔥</span>}
             {task.title}
           </p>
+          {!compact && emailLines.length > 0 && (
+            <div className="mt-1.5 space-y-0.5">
+              {emailLines.map((line, i) => (
+                <p key={i} className="text-xs text-muted truncate">{line}</p>
+              ))}
+            </div>
+          )}
           {!compact && (
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               {task.dueTime && <span className="text-xs text-muted">{task.dueTime}</span>}
