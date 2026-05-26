@@ -19,6 +19,12 @@ function getWeekDates(dateStr: string): string[] {
   });
 }
 
+const priorityBg: Record<string, string> = {
+  high: 'bg-rose',
+  medium: 'bg-cream',
+  low: 'bg-blue',
+};
+
 export default function WeekView({ selectedDate, tasks, onTaskClick }: WeekViewProps) {
   const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
   const dates = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
@@ -27,7 +33,14 @@ export default function WeekView({ selectedDate, tasks, onTaskClick }: WeekViewP
     <div>
       <div className="grid grid-cols-7 gap-2 mb-2">
         {dates.map((date, i) => (
-          <div key={date} className={`text-center p-2 rounded-lg text-sm ${date === selectedDate ? 'bg-primary/20 text-primary font-bold' : 'text-muted'}`}>
+          <div
+            key={date}
+            className={`text-center p-2 rounded-xl text-sm border-2 transition-all ${
+              date === selectedDate
+                ? 'bg-blue border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black'
+                : 'border-black bg-white font-bold opacity-50'
+            }`}
+          >
             <div>{weekDays[i]}</div>
             <div>{date.slice(8)}</div>
           </div>
@@ -36,19 +49,24 @@ export default function WeekView({ selectedDate, tasks, onTaskClick }: WeekViewP
       <div className="grid grid-cols-7 gap-2">
         {dates.map((date) => {
           const dayTasks = tasks.filter((t) => t.dueDate?.slice(0, 10) === date);
+          const isToday = date === new Date().toISOString().slice(0, 10);
           return (
-            <div key={date} className="min-h-[120px] bg-surface-light rounded-lg p-2 space-y-1">
+            <div
+              key={date}
+              className={`min-h-[120px] rounded-xl p-2 space-y-1 border-2 ${
+                isToday ? 'border-black bg-blue/30' : 'border-black bg-white'
+              } ${date === selectedDate ? 'shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : ''}`}
+            >
               {dayTasks.slice(0, 3).map((task) => (
                 <div
                   key={task.id}
                   onClick={() => onTaskClick(task)}
-                  className="text-xs bg-primary/20 px-2 py-1 rounded cursor-pointer hover:bg-primary/30 truncate"
-                  style={{ borderLeft: `2px solid ${task.priority === 'high' ? '#f7768e' : task.priority === 'medium' ? '#e2b714' : '#7aa2f7'}` }}
+                  className={`text-xs px-2 py-1 rounded-lg cursor-pointer truncate font-bold border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${priorityBg[task.priority] || 'bg-white'}`}
                 >
                   {task.title}
                 </div>
               ))}
-              {dayTasks.length > 3 && <p className="text-xs text-muted pl-2">+{dayTasks.length - 3} 项</p>}
+              {dayTasks.length > 3 && <p className="text-xs font-bold opacity-50 pl-2">+{dayTasks.length - 3} 项</p>}
             </div>
           );
         })}

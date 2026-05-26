@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/auth.service';
+import * as settingsService from '../services/settings.service';
+import prisma from '../db';
 
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
@@ -10,6 +12,15 @@ export async function register(req: Request, res: Response, next: NextFunction) 
     if (password.length < 6) {
       return res.status(400).json({ message: '密码长度至少6位' });
     }
+
+    // Check if registration is enabled (default: closed)
+    const enabled = await settingsService.getSetting('registration_enabled');
+    const userCount = await prisma.user.count();
+    // Allow if explicitly enabled OR if no users exist yet (first user always allowed)
+    if (enabled !== 'true' && userCount > 0) {
+      return res.status(403).json({ message: '注册已关闭' });
+    }
+
     const result = await authService.register({ email, password, name });
     res.status(201).json({
       user: result.user,

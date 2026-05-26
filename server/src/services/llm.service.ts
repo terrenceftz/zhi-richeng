@@ -199,6 +199,61 @@ ${taskList}
   return result.includes('无冲突') ? null : result;
 }
 
+export async function classifyIntent(text: string): Promise<'schedule' | 'query' | 'chat'> {
+  // Fast heuristic check first
+  const chatPatterns = /(你帮|帮我做|帮我写|怎么样|如何做|什么意思|怎么用|你是谁|你能做什么)/;
+  const schedulePatterns = /(明天|后天|今天|下个?周|下个月|周一|周二|周三|周四|周五|周六|周日|提醒我|日程|添加任务|安排|开会|提交|截止|在.*点|下午|上午|晚上)/;
+  const queryPatterns = /(有哪些|多少|查询|查一下|这周|本周|最近|统计|找一下|帮我查|帮我找|帮我看看|还有哪些|所有|哪些|怎么|如何|什么|几个)/;
+
+  // Chat-like requests should not be schedule
+  if (chatPatterns.test(text)) return 'chat';
+
+  if (schedulePatterns.test(text) && !queryPatterns.test(text)) return 'schedule';
+  if (queryPatterns.test(text) && !schedulePatterns.test(text)) return 'query';
+
+  const apiKey = await getDeepSeekApiKey();
+  if (!apiKey) return schedulePatterns.test(text) ? 'schedule' : 'chat';
+
+  const client = new OpenAI({ apiKey, baseURL: config.deepseek.baseURL });
+
+  const response = await client.chat.completions.create({
+    model: config.deepseek.model,
+    messages: [
+      { role: 'system', content: '你是一个意图分类器。分析用户输入，只回复一个单词：\n- 如果用户想添加、创建、安排日程/待办/任务/提醒 → 回复 schedule\n- 如果用户在询问、查询、搜索任务列表 → 回复 query\n- 其他闲聊、问候、感谢等 → 回复 chat\n\n只回复一个单词，不要解释。' },
+      { role: 'user', content: text },
+    ],
+    temperature: 0,
+    max_tokens: 10,
+  });
+
+  const result = (response.choices[0]?.message?.content || '').trim().toLowerCase();
+  const word = result.split(/\s/)[0]; // first word only
+  if (word === 'schedule') return 'schedule';
+  if (word === 'query') return 'query';
+  if (result.includes('schedule')) return 'schedule';
+  if (result.includes('query')) return 'query';
+  return 'chat';
+}
+
+export async function chat(text: string): Promise<string> {
+  const apiKey = await getDeepSeekApiKey();
+  if (!apiKey) return '你好！我是智日程助手，可以帮你添加日程、查询任务。试试说"明天下午3点开会"吧！';
+
+  const client = new OpenAI({ apiKey, baseURL: config.deepseek.baseURL });
+
+  const response = await client.chat.completions.create({
+    model: config.deepseek.model,
+    messages: [
+      { role: 'system', content: '你是智日程AI助手，帮助用户管理日程。回答简洁友好（80字以内）。' },
+      { role: 'user', content: text },
+    ],
+    temperature: 0.5,
+    max_tokens: 200,
+  });
+
+  return response.choices[0]?.message?.content || '有什么我可以帮你的吗？';
+}
+
 export async function extractTasks(text: string): Promise<{ tasks: ParsedTask[] }> {
   const client = await getLLMClient();
 

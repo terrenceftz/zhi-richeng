@@ -44,6 +44,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       feishuAppSecret: dbAppSecret ? '••••••••' : (feishuAppSecret() ? '••••••••' : ''),
       feishuConfigured: hasFeishuApp,
       feishuConnected: isFeishuConnected(),
+      regEnabled: settings.registration_enabled || 'true',
       reminderMinutes: parseInt(settings.reminder_minutes || '15'),
       reminderEnabled: settings.reminder_enabled !== 'false',
     });
@@ -54,7 +55,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled } = req.body;
+    const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, regEnabled } = req.body;
     if (deepseekApiKey !== undefined) {
       await settingsService.setSetting('deepseek_api_key', deepseekApiKey);
     }
@@ -72,6 +73,9 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
     }
     if (reminderEnabled !== undefined) {
       await settingsService.setSetting('reminder_enabled', String(reminderEnabled));
+    }
+    if (regEnabled !== undefined) {
+      await settingsService.setSetting('registration_enabled', String(regEnabled));
     }
     const settings = await settingsService.getAllSettings();
     const imTokenKey = `im_user_${req.userId}`;

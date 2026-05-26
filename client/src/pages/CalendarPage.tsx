@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { CalendarDays } from 'lucide-react';
 import { useTaskStore } from '../stores/taskStore';
 import type { Task } from '../types';
 import DayView from '../components/calendar/DayView';
@@ -40,13 +41,20 @@ export default function CalendarPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">日历</h2>
-        <div className="flex bg-surface-light rounded-xl p-1 gap-1">
+        <h2 className="text-2xl font-black flex items-center gap-2">
+          <CalendarDays className="w-6 h-6" />
+          日历
+        </h2>
+        <div className="flex bg-white border-2 border-black rounded-2xl p-1 gap-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
           {tabs.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setViewMode(key)}
-              className={`px-4 py-1.5 text-sm rounded-lg transition-all ${viewMode === key ? 'bg-primary text-white font-medium' : 'text-muted hover:text-text'}`}
+              className={`px-4 py-1.5 text-sm font-bold rounded-xl transition-all ${
+                viewMode === key
+                  ? 'bg-blue border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5'
+                  : 'text-gray-400 hover:text-black'
+              }`}
             >
               {label}
             </button>
@@ -54,7 +62,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <div className="bg-surface border border-border rounded-2xl p-6">
+      <div className="bg-white border-2 border-black rounded-2xl p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
         {viewMode === 'day' && <DayView date={selectedDate} tasks={tasks} onTaskClick={handleTaskClick} />}
         {viewMode === 'week' && <WeekView selectedDate={selectedDate} tasks={tasks} onTaskClick={handleTaskClick} />}
         {viewMode === 'month' && (

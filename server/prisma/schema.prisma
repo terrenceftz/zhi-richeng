@@ -65,3 +65,4 @@ model Idea {
   source    String   @default("web") // web | feishu
   createdAt DateTime @default(now())
 }
+

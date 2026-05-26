@@ -1,12 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import ThemeToggle from '../ui/ThemeToggle';
+import { LayoutDashboard, Calendar, Lightbulb, Settings, LogOut } from 'lucide-react';
 
 const navItems = [
-  { to: '/', label: '今日概览', icon: '📋' },
-  { to: '/calendar', label: '日历', icon: '📅' },
-  { to: '/inspiration', label: '灵感', icon: '💡' },
-  { to: '/settings', label: '设置', icon: '⚙️' },
+  { to: '/', label: '今日概览', icon: LayoutDashboard },
+  { to: '/calendar', label: '日历', icon: Calendar },
+  { to: '/inspiration', label: '灵感', icon: Lightbulb },
+  { to: '/settings', label: '设置', icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -19,48 +19,50 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 h-screen bg-surface border-r border-border flex flex-col fixed left-0 top-0 z-40">
-      <div className="p-6">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          智日程
-        </h1>
+    <aside className="w-64 bg-bg p-6 flex flex-col h-full shrink-0">
+      <div className="flex items-center gap-4 mb-10">
+        <div className="w-12 h-12 bg-coral rounded-2xl flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black">
+          <span className="text-white text-2xl font-black">智</span>
+        </div>
+        <div>
+          <h1 className="text-xl font-black text-black tracking-tight">智日程</h1>
+          <span className="text-coral font-serif italic font-normal text-sm block -mt-1">ZhiRicheng</span>
+        </div>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${
-                isActive
-                  ? 'bg-primary/20 text-primary font-medium'
-                  : 'text-muted hover:text-text hover:bg-surface-light'
-              }`
-            }
-          >
-            <span>{item.icon}</span>
-            {item.label}
-          </NavLink>
-        ))}
+      <nav className="flex-1 flex flex-col gap-3">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                `w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 border-2 font-bold ${
+                  isActive
+                    ? 'border-black bg-blue shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black'
+                    : 'border-transparent text-gray-600 hover:border-black hover:bg-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                }`
+              }
+            >
+              <Icon className="w-5 h-5" />
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
 
-      <div className="p-4 border-t border-border space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xs font-bold">
-              {user?.name?.charAt(0) || 'U'}
-            </div>
-            <span className="text-sm text-text truncate">{user?.name || '用户'}</span>
-          </div>
-          <ThemeToggle />
+      <div className="mt-auto flex items-center gap-4 p-3 bg-white rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black">
+        <div className="w-10 h-10 bg-mint border-2 border-black rounded-xl flex items-center justify-center text-lg overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          {user?.name?.charAt(0) || 'U'}
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-full text-left text-xs text-muted hover:text-danger transition-colors px-2"
-        >
-          退出登录
+        <div className="flex-1 min-w-0">
+          <p className="font-black text-black truncate text-sm">{user?.name || '用户'}</p>
+          <p className="text-xs text-gray-500 font-bold truncate">在线</p>
+        </div>
+        <button onClick={handleLogout} className="p-2 hover:bg-rose rounded-lg transition-colors" title="退出">
+          <LogOut className="w-4 h-4 text-gray-400" />
         </button>
       </div>
     </aside>
