@@ -64,32 +64,22 @@ function buildParsePrompt(): string {
 }
 
 function buildExtractPrompt(): string {
-  return `你是一个公文/通知解析助手。从以下文档内容中提取所有关键时间节点和截止日期。
+  return `你是公文解析专家。从文档中提取所有有时间要求的待办事项。
 
 **当前日期：${getTodayInfo()}**
 
-规则：
-- 提取每一项有明确截止日期或时间要求的事项
-- 每个事项生成一条任务，包含：标题、日期、优先级、任务类型
-- 标题应简洁且保留原文关键信息
-- 日期推算：参考当前日期，处理文中的相对日期（规则同日程解析）
-- 提取邮件信息：
-  - 识别"发送至/发送到/报送/发到/发至/邮箱/邮件"后的邮箱地址 → emailTo 字段
-  - 识别"邮件主题命名为/邮件标题为/主题为"后的内容 → emailSubject 字段
-  - 将需要提交的材料/附件信息整理到 description 字段
-  - 没有邮件相关时 emailTo、emailSubject 为 null
-- 任务类型（category）识别：
-  - 涉及"交/提交/上报/收集/材料/资料/申报/填报" → "资料收集"
-  - 涉及"审核/评审/审批/审查/公示/复核/检查" → "审核"
-  - 涉及"开会/会议/讨论/汇报" → "会议"
-  - 其他 → "通用"
-- 优先级判断：
-  - "截止/必须/务必/逾期" → high
-  - "建议/可以/推荐" → low
-  - 默认 → medium
-- 如果文档中没有明显截止日期的事项，返回空数组
+关键规则：
+- 逐段扫描，任何带日期的动作都要提取为独立任务
+- 标题必须包含动作+对象，如"学院网上审核"、"纸质材料报送至学生资助中心"、"提交电子版材料"
+- 日期推算：今年未指定年份的日期，根据上下文推断
+- 日期范围如"6月8日-6月12日"→取起始日6月8日
+- 邮件提取：发送至/报送至后的邮箱→emailTo，"主题命名为"后的内容→emailSubject，材料清单→description
+- category：交/提交/报送/申报→"资料收集"，审核/审批/审查→"审核"，会议/开会→"会议"，其他→"通用"
+- priority：截止/务必→high，默认→medium
+- 即使只有1条也要提取，绝不返回空数组
 
-请只返回 JSON，不要包含其他文字。`;
+输出格式（只返回JSON数组）：
+{"tasks":[{"title":"...","dueDate":"YYYY-MM-DD","dueTime":null,"priority":"medium","category":"资料收集","emailTo":"...","emailSubject":"...","description":"..."}]}`;
 }
 
 export interface ParsedTask {
@@ -264,7 +254,7 @@ export async function extractTasks(text: string): Promise<{ tasks: ParsedTask[] 
       { role: 'user', content: text },
     ],
     temperature: 0.1,
-    max_tokens: 2000,
+    max_tokens: 3000,
   });
 
   const content = response.choices[0]?.message?.content || '{"tasks":[]}';

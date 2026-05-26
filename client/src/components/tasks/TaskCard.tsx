@@ -62,7 +62,7 @@ export default function TaskCard({ task, onClick, compact }: TaskCardProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       onClick={onClick}
-      className={`border-2 border-black rounded-2xl p-3 cursor-pointer transition-all group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${cardBg}`}
+      className={`border-2 border-black rounded-2xl p-3 cursor-pointer transition-all group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden ${cardBg}`}
     >
       <div className="flex items-start gap-3">
         <button
@@ -79,7 +79,7 @@ export default function TaskCard({ task, onClick, compact }: TaskCardProps) {
         />
         <div className="flex-1 min-w-0">
           <p
-            className={`text-sm flex items-center gap-1.5 font-bold ${
+            className={`text-sm flex items-center gap-1.5 font-bold min-w-0 ${
               task.status === 'done'
                 ? 'line-through text-gray-500'
                 : 'text-black'
@@ -88,15 +88,20 @@ export default function TaskCard({ task, onClick, compact }: TaskCardProps) {
             {isHigh && (
               <Flame className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
             )}
-            {task.title}
+            <span className="truncate">{task.title}</span>
           </p>
           {!compact && emailLines.length > 0 && (
-            <div className="mt-1.5 space-y-0.5">
+            <div className="mt-1.5 space-y-0.5 min-w-0 overflow-hidden">
               {emailLines.map((line, i) => (
-                <p key={i} className="text-xs text-gray-500 truncate">
+                <p key={i} className="text-xs text-gray-500 truncate break-all">
                   {line}
                 </p>
               ))}
+            </div>
+          )}
+          {!compact && task.description && emailLines.length === 0 && (
+            <div className="mt-1.5 min-w-0 overflow-hidden">
+              <p className="text-xs text-gray-500 truncate break-all">{task.description}</p>
             </div>
           )}
           {!compact && (
