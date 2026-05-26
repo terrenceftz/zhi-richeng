@@ -108,7 +108,7 @@ export default function DashboardPage() {
       <SmartBar />
 
       <div className="flex gap-6 max-lg:flex-col">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black flex items-center gap-2">
               <ListChecks className="w-5 h-5" />
