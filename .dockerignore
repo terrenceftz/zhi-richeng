@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+*.md
+.env
+.env.*
+!.env.example
+dev.db
+dev.db-journal
+.superpowers
+docs/
+.DS_Store
