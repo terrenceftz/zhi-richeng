@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTaskStore } from '../../stores/taskStore';
 
 interface MiniCalendarProps {
@@ -55,34 +56,38 @@ export default function MiniCalendar({ onDateSelect }: MiniCalendarProps) {
   const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
   return (
-    <div className="bg-surface border border-border rounded-xl p-4">
+    <div className="bg-white border-2 border-black rounded-2xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => changeMonth(-1)} className="text-muted hover:text-text text-sm">&lt;</button>
-        <span className="text-sm font-medium">{year}年{month}月</span>
-        <button onClick={() => changeMonth(1)} className="text-muted hover:text-text text-sm">&gt;</button>
+        <button onClick={() => changeMonth(-1)} className="w-7 h-7 flex items-center justify-center rounded-lg border-2 border-black bg-white hover:bg-blue transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
+        <span className="text-sm font-black">{year}年{month}月</span>
+        <button onClick={() => changeMonth(1)} className="w-7 h-7 flex items-center justify-center rounded-lg border-2 border-black bg-white hover:bg-blue transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center">
         {weekDays.map((d) => (
-          <div key={d} className="text-xs text-muted py-1">{d}</div>
+          <div key={d} className="text-xs font-bold opacity-40 py-1">{d}</div>
         ))}
         {days.map((d, i) => (
-          <div key={i} className="py-1">
+          <div key={i} className="py-0.5">
             {d !== null ? (
               <button
                 onClick={() => handleClick(d)}
-                className={`w-8 h-8 text-xs rounded-lg flex items-center justify-center transition-all relative ${
+                className={`w-8 h-8 text-xs rounded-lg flex items-center justify-center font-bold transition-all relative ${
                   isSelected(d)
-                    ? 'bg-primary text-white font-bold'
+                    ? 'bg-blue border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
                     : isToday(d)
-                    ? 'bg-accent/20 text-accent font-bold'
-                    : 'text-text hover:bg-surface-light'
+                    ? 'bg-coral text-white border-2 border-black'
+                    : 'text-black hover:bg-blue/50 border border-transparent'
                 }`}
               >
                 {d}
                 {datesWithTasks.has(
                   `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`
                 ) && (
-                  <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-primary" />
+                  <span className={`absolute bottom-0.5 w-1.5 h-1.5 rounded-full border border-black ${isToday(d) ? 'bg-white' : 'bg-black'}`} />
                 )}
               </button>
             ) : (

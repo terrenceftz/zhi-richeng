@@ -39,12 +39,12 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
     <div>
       <div className="grid grid-cols-7 gap-1 mb-2">
         {['日', '一', '二', '三', '四', '五', '六'].map((d) => (
-          <div key={d} className="text-center text-xs text-muted py-2 font-medium">{d}</div>
+          <div key={d} className="text-center text-xs font-black py-2 opacity-50">{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
         {days.map((d, i) => {
-          if (d === null) return <div key={i} className="aspect-square bg-surface-light/30 rounded-lg" />;
+          if (d === null) return <div key={i} className="aspect-square bg-gray-50/50 rounded-lg" />;
           const ds = fmt(d);
           const dayTasks = tasksByDate[ds] || [];
           const isSelected = ds === selectedDate;
@@ -54,20 +54,26 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
             <div
               key={i}
               onClick={() => onDateSelect(ds)}
-              className={`aspect-square bg-surface-light rounded-lg p-1 cursor-pointer hover:border-primary/50 border border-transparent transition-colors overflow-hidden ${isSelected ? 'border-primary bg-primary/10' : ''} ${isToday ? 'ring-1 ring-accent' : ''}`}
+              className={`aspect-square rounded-lg p-1 cursor-pointer border-2 transition-all overflow-hidden ${
+                isSelected
+                  ? 'bg-blue border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                  : isToday
+                  ? 'ring-2 ring-black bg-white border-black'
+                  : 'bg-white border-gray-300 hover:border-black'
+              }`}
             >
-              <div className={`text-xs mb-0.5 px-1 ${isToday ? 'text-accent font-bold' : 'text-muted'}`}>{d}</div>
+              <div className={`text-xs mb-0.5 px-0.5 font-bold ${isToday ? 'text-white bg-coral rounded-full w-5 h-5 flex items-center justify-center' : isSelected ? '' : 'opacity-50'}`}>{d}</div>
               <div className="space-y-0.5">
                 {dayTasks.slice(0, 2).map((task) => (
                   <div
                     key={task.id}
                     onClick={(e) => { e.stopPropagation(); onTaskClick(task); }}
-                    className="text-[10px] px-1 py-0.5 rounded truncate bg-primary/20 text-primary cursor-pointer"
+                    className="text-[10px] px-1 py-0.5 rounded-md truncate font-bold bg-black text-white cursor-pointer"
                   >
                     {task.title}
                   </div>
                 ))}
-                {dayTasks.length > 2 && <div className="text-[10px] text-muted px-1">+{dayTasks.length - 2}</div>}
+                {dayTasks.length > 2 && <div className="text-[10px] font-bold opacity-50 px-1">+{dayTasks.length - 2}</div>}
               </div>
             </div>
           );

@@ -1,35 +1,21 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: 'var(--color-primary)',
-          light: 'var(--color-primary-light)',
-          dark: 'var(--color-primary-dark)',
-        },
-        accent: {
-          DEFAULT: 'var(--color-accent)',
-          light: 'var(--color-accent-light)',
-          dark: 'var(--color-accent-dark)',
-        },
-        surface: {
-          DEFAULT: 'var(--color-surface)',
-          light: 'var(--color-surface-light)',
-          dark: 'var(--color-surface-dark)',
-        },
-        danger: 'var(--color-danger)',
-        info: 'var(--color-info)',
-        muted: 'var(--color-muted)',
-        text: 'var(--color-text)',
-        border: {
-          DEFAULT: 'var(--color-border)',
-          light: 'var(--color-border-light)',
-        },
+        rose: '#FFD8D8',
+        blue: '#D8F3FF',
+        mint: '#E8FFD8',
+        cream: '#FFF0D8',
+        lavender: '#E8E0FF',
+        coral: '#FF8E8E',
+        bg: '#FDF8F2',
       },
-      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      fontFamily: {
+        sans: ["'PingFang SC'", "'Hiragino Sans GB'", "'Microsoft YaHei'", 'sans-serif'],
+        serif: ["'Zilla Slab'", 'serif'],
+      },
     },
   },
   plugins: [],

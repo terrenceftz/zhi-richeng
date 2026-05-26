@@ -1,21 +1,17 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
 export default function AppLayout() {
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="flex-1 ml-64 p-6 lg:p-8 max-md:ml-0 max-md:pb-20">
-        <Outlet />
-      </main>
-      <nav className="hidden max-md:flex fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-40 justify-around py-2">
-        <NavLink to="/" end className={({ isActive }) => `flex flex-col items-center text-xs px-4 py-1 ${isActive ? 'text-primary' : 'text-muted'}`}>
-          <span className="text-lg">📋</span>概览
-        </NavLink>
-        <NavLink to="/calendar" className={({ isActive }) => `flex flex-col items-center text-xs px-4 py-1 ${isActive ? 'text-primary' : 'text-muted'}`}>
-          <span className="text-lg">📅</span>日历
-        </NavLink>
-      </nav>
+    <div className="h-screen w-screen flex items-center justify-center p-4 lg:p-8 bg-bg">
+      <div className="w-full h-full max-w-[1400px] flex rounded-[32px] bg-bg shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] overflow-hidden border-2 border-black">
+        <Sidebar />
+        <main className="flex-1 flex relative overflow-hidden bg-white/50 border-l-2 border-black rounded-r-[32px]">
+          <div className="absolute inset-0 overflow-y-auto p-6 lg:p-8 max-md:pb-20">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

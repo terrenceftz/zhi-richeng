@@ -39,4 +39,33 @@ router.put('/me', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, name: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    res.json({ users });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (req.params.id === req.userId) {
+      return res.status(400).json({ message: '不能删除自己' });
+    }
+    // Admin is user with id=1 (first registered) or email=admin@mboker.cn
+    const requestingUser = await prisma.user.findUnique({ where: { id: req.userId! } });
+    if (!requestingUser || requestingUser.email !== 'admin@mboker.cn') {
+      return res.status(403).json({ message: '仅管理员可删除用户' });
+    }
+    await prisma.user.delete({ where: { id: req.params.id } });
+    res.json({ message: '已删除' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

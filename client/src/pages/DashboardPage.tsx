@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ListChecks, CalendarDays, ChevronRight } from 'lucide-react';
 import { useTaskStore } from '../stores/taskStore';
 import { useAuthStore } from '../stores/authStore';
 import type { Task } from '../types';
-import SmartInput from '../components/SmartInput';
-import AIChatBar from '../components/AIChatBar';
+import SmartBar from '../components/SmartBar';
 import TaskCard from '../components/tasks/TaskCard';
 import Button from '../components/ui/Button';
 import MiniCalendar from '../components/calendar/MiniCalendar';
@@ -18,6 +18,15 @@ export default function DashboardPage() {
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showTodayDone, setShowTodayDone] = useState(false);
+  const [quote, setQuote] = useState('');
+
+  useEffect(() => {
+    fetch('https://v1.hitokoto.cn/?c=a&c=b&c=c&c=d&c=i&c=k&encode=text&max_length=30')
+      .then(r => r.text())
+      .then(setQuote)
+      .catch(() => setQuote('每一天都是新的开始'));
+
+  }, []);
 
   useEffect(() => {
     fetchTasks();
@@ -83,26 +92,36 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-1">
-        你好，{user?.name || '用户'} 👋
-      </h2>
-      <p className="text-muted text-sm mb-6">{new Date().toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      {/* Greeting header card */}
+      <div className="bg-rose border-2 border-black rounded-2xl px-4 py-3 mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-4 max-md:flex-col max-md:items-start relative overflow-hidden">
+        <svg className="absolute -right-1 -top-1 w-7 h-7 opacity-50" viewBox="0 0 24 24"><path d="M12 0l3 8 8 3-8 3-3 8-3-8L1 11l8-3 3-8z" fill="#FFD700" stroke="#000" strokeWidth="1"/></svg>
+        <svg className="absolute right-16 -bottom-2 w-4 h-4 opacity-30" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="#000" strokeWidth="1.5"/></svg>
+        <div className="relative z-10">
+          <h2 className="text-lg font-black">你好，{user?.name || '用户'}</h2>
+          <p className="font-bold text-xs opacity-50">{new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}</p>
+        </div>
+        {quote && (
+          <p className="font-serif italic text-sm text-black/60 max-w-[180px] text-right max-md:text-left relative z-10">&ldquo;{quote}&rdquo;</p>
+        )}
+      </div>
 
-      <SmartInput />
-
-      {/* AI Query bar */}
-      <AIChatBar />
+      <SmartBar />
 
       <div className="flex gap-6 max-lg:flex-col">
         <div className="flex-1">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">今日任务</h3>
+            <h3 className="text-lg font-black flex items-center gap-2">
+              <ListChecks className="w-5 h-5" />
+              今日任务
+            </h3>
             <button onClick={() => { setFormMode('create'); setEditingTask(null); setShowForm(true); }}
-              className="text-sm text-primary hover:underline">+ 添加</button>
+              className="text-sm font-bold bg-black text-white px-4 py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
+              + 添加
+            </button>
           </div>
 
           {isLoading ? (
-            <div className="text-center text-muted py-12">加载中...</div>
+            <div className="text-center py-12 font-bold">加载中...</div>
           ) : (
             <AnimatePresence mode="popLayout">
               {todayActive.length > 0 ? (
@@ -123,9 +142,9 @@ export default function DashboardPage() {
                   ))}
                 </motion.div>
               ) : (
-                <motion.div layout className="text-center text-muted py-12">
-                  <p className="text-4xl mb-3">📭</p>
-                  <p className="text-sm">今天还没有任务，用上方输入框快速添加</p>
+                <motion.div layout className="text-center py-12">
+                  <CalendarDays className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                  <p className="text-sm font-bold opacity-50">今天还没有任务，用上方输入框快速添加</p>
                 </motion.div>
               )}
 
@@ -133,10 +152,10 @@ export default function DashboardPage() {
                 <motion.div layout className="mt-6">
                   <button
                     onClick={() => setShowTodayDone(!showTodayDone)}
-                    className="flex items-center gap-2 text-xs text-muted hover:text-text transition-colors mb-3"
+                    className="flex items-center gap-2 text-xs font-bold hover:opacity-70 transition-opacity mb-3"
                   >
                     <motion.span animate={{ rotate: showTodayDone ? 90 : 0 }} transition={{ duration: 0.2 }}>
-                      ▶
+                      <ChevronRight className="w-4 h-4" />
                     </motion.span>
                     已完成 ({todayDone.length})
                   </button>
@@ -172,7 +191,7 @@ export default function DashboardPage() {
 
           {unscheduledActive.length > 0 && (
             <motion.div layout className="mt-8">
-              <h3 className="text-lg font-bold mb-4">待安排任务</h3>
+              <h3 className="text-lg font-black mb-4">待安排任务</h3>
               <div className="space-y-2">
                 {unscheduledActive.map((task) => (
                   <motion.div key={task.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -185,7 +204,7 @@ export default function DashboardPage() {
 
           {unscheduledDone.length > 0 && (
             <motion.div layout className="mt-4">
-              <p className="text-xs text-muted mb-2">已完成的待安排任务 ({unscheduledDone.length})</p>
+              <p className="text-xs font-bold opacity-50 mb-2">已完成的待安排任务 ({unscheduledDone.length})</p>
               <div className="space-y-2 opacity-50">
                 {unscheduledDone.map((task) => (
                   <motion.div key={task.id} layout>
@@ -200,18 +219,20 @@ export default function DashboardPage() {
         <div className="w-72 flex-shrink-0 max-lg:w-full space-y-4">
           <MiniCalendar onDateSelect={handleDateSelect} />
 
-          <div className="bg-gradient-to-br from-surface-light to-surface-dark rounded-xl p-5">
-            <p className="text-xs text-muted uppercase tracking-wider mb-1">今日完成率</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          {/* Completion rate card */}
+          <div className="bg-white border-2 border-black rounded-2xl p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
+            <svg className="absolute right-2 top-2 w-8 h-8 opacity-10" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#000" strokeWidth="1.5"/><circle cx="12" cy="12" r="4" fill="#000"/></svg>
+            <p className="text-xs font-bold uppercase tracking-wider mb-1 opacity-50 relative z-10">今日完成率</p>
+            <p className="text-3xl font-black">
               {completionRate}%
             </p>
-            <div className="mt-3 bg-surface-dark rounded-full h-2 overflow-hidden">
+            <div className="mt-3 bg-gray-100 rounded-full h-2 overflow-hidden border border-black">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
+                className="h-full rounded-full bg-black transition-all duration-500"
                 style={{ width: `${completionRate}%` }}
               />
             </div>
-            <p className="text-xs text-muted mt-2">
+            <p className="text-xs font-bold opacity-50 mt-2">
               {todayDone.length}/{totalToday} 项已完成
             </p>
           </div>
@@ -225,7 +246,7 @@ export default function DashboardPage() {
           onCancel={() => setShowForm(false)}
         />
         {formMode === 'edit' && (
-          <div className="mt-6 pt-6 border-t border-border">
+          <div className="mt-6 pt-6 border-t-2 border-black">
             <Button variant="danger" onClick={handleDelete} className="w-full">删除任务</Button>
           </div>
         )}

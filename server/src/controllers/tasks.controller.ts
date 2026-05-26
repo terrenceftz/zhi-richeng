@@ -143,6 +143,36 @@ export async function decompose(req: Request, res: Response, next: NextFunction)
   }
 }
 
+export async function smart(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ message: '缺少 text 字段' });
+
+    // Classify intent: schedule, query, or chat
+    const intent = await llmService.classifyIntent(text);
+
+    if (intent === 'schedule') {
+      const parsed = await llmService.parseTask(text);
+      res.json({ type: 'schedule', parsed, confirmed: false });
+    } else if (intent === 'query') {
+      const tasks = await tasksService.getTasks(req.userId!, {});
+      const statusCN: Record<string, string> = { todo: '待办', in_progress: '进行中', done: '完成' };
+      const taskList = tasks.slice(0, 30).map((t) =>
+        `${t.priority === 'high' ? '🔴' : t.priority === 'medium' ? '🟡' : '🟢'} ${t.title}` +
+        `${t.dueDate ? ' → ' + new Date(t.dueDate).toISOString().slice(0, 10) : ''}` +
+        `${t.dueTime ? ' ' + t.dueTime : ''} [${statusCN[t.status] || t.status}]`
+      ).join('\n');
+      const answer = await llmService.queryTasks(text, taskList);
+      res.json({ type: 'query', answer });
+    } else {
+      const reply = await llmService.chat(text);
+      res.json({ type: 'chat', answer: reply });
+    }
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function queryNL(req: Request, res: Response, next: NextFunction) {
   try {
     const { question } = req.body;
