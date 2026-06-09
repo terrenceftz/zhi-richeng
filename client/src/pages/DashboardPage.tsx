@@ -27,7 +27,23 @@ export default function DashboardPage() {
   const [breakCountdown, setBreakCountdown] = useState<{ label: string; daysUntil: number } | null>(null);
 
   useEffect(() => {
+    // 学期配置几乎不变，缓存 1 天
+    const CACHE_KEY = 'zrc_semester_cache';
+    const CACHE_TTL = 24 * 60 * 60 * 1000;
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const { data, ts } = JSON.parse(cached);
+        if (Date.now() - ts < CACHE_TTL && data.semesterName && data.semesterStart) {
+          const config: SemesterConfig = { name: data.semesterName, start: data.semesterStart, end: data.semesterEnd || '' };
+          setTeachingWeek(getTeachingWeek(config));
+          setBreakCountdown(getBreakCountdown(config));
+          return;
+        }
+      } catch {}
+    }
     client.get('/settings').then(({ data }) => {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
       if (data.semesterName && data.semesterStart) {
         const config: SemesterConfig = {
           name: data.semesterName,
