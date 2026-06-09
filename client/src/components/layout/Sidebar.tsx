@@ -26,7 +26,7 @@ export default function Sidebar() {
         </div>
         <div>
           <h1 className="text-xl font-black text-black tracking-tight">智日程</h1>
-          <span className="text-coral font-serif italic font-normal text-sm block -mt-1">ZhiRicheng</span>
+          <span className="text-coral font-sans font-bold text-xs block">辅导员的每日任务看板</span>
         </div>
       </div>
 
