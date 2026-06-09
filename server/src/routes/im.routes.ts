@@ -6,6 +6,16 @@ import * as settingsService from '../services/settings.service';
 
 const router = Router();
 
+// 强制 HTTPS（防止 token 明文传输）
+function requireHTTPS(req: Request, res: Response, next: NextFunction) {
+  if (req.secure || req.get('x-forwarded-proto') === 'https') {
+    return next();
+  }
+  return res.status(403).json({ message: 'IM 接口必须使用 HTTPS' });
+}
+
+router.use(requireHTTPS);
+
 async function findUserByIMToken(token: string) {
   const userId = await settingsService.getSetting(`im_token_${token}`);
   if (!userId) return null;

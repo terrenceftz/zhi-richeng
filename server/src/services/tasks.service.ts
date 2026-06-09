@@ -95,27 +95,30 @@ export async function createTask(userId: string, input: CreateTaskInput) {
 }
 
 export async function createTasksBatch(userId: string, inputs: CreateTaskInput[]) {
-  const maxOrder = await prisma.task.aggregate({ where: { userId }, _max: { sortOrder: true } });
-  let nextOrder = (maxOrder._max.sortOrder ?? -1) + 1;
+  const tasks = await prisma.$transaction(async (tx) => {
+    const maxOrder = await tx.task.aggregate({ where: { userId }, _max: { sortOrder: true } });
+    let nextOrder = (maxOrder._max.sortOrder ?? -1) + 1;
 
-  const tasks = [];
-  for (const input of inputs) {
-    const task = await prisma.task.create({
-      data: {
-        userId,
-        title: input.title,
-        description: input.description || null,
-        status: input.status || 'todo',
-        priority: input.priority || 'medium',
-        category: input.category || null,
-        dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        dueTime: input.dueTime || null,
-        tags: stringifyTags(input.tags),
-        sortOrder: nextOrder++,
-      },
-    });
-    tasks.push(parseTags(task));
-  }
+    const results = [];
+    for (const input of inputs) {
+      const task = await tx.task.create({
+        data: {
+          userId,
+          title: input.title,
+          description: input.description || null,
+          status: input.status || 'todo',
+          priority: input.priority || 'medium',
+          category: input.category || null,
+          dueDate: input.dueDate ? new Date(input.dueDate) : null,
+          dueTime: input.dueTime || null,
+          tags: stringifyTags(input.tags),
+          sortOrder: nextOrder++,
+        },
+      });
+      results.push(parseTags(task));
+    }
+    return results;
+  });
   return tasks;
 }
 
