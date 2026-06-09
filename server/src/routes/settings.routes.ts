@@ -48,6 +48,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       regEnabled: settings.registration_enabled || 'true',
       reminderMinutes: parseInt(settings.reminder_minutes || '15'),
       reminderEnabled: settings.reminder_enabled !== 'false',
+      semesterName: settings.semester_name || '',
+      semesterStart: settings.semester_start || '',
+      semesterEnd: settings.semester_end || '',
     });
   } catch (err) {
     next(err);
@@ -56,7 +59,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, regEnabled } = req.body;
+    const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, regEnabled, semesterName, semesterStart, semesterEnd } = req.body;
     if (deepseekApiKey !== undefined) {
       await settingsService.setSetting('deepseek_api_key', deepseekApiKey);
       clearLLMCache();
@@ -78,6 +81,15 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
     }
     if (regEnabled !== undefined) {
       await settingsService.setSetting('registration_enabled', String(regEnabled));
+    }
+    if (semesterName !== undefined) {
+      await settingsService.setSetting('semester_name', semesterName);
+    }
+    if (semesterStart !== undefined) {
+      await settingsService.setSetting('semester_start', semesterStart);
+    }
+    if (semesterEnd !== undefined) {
+      await settingsService.setSetting('semester_end', semesterEnd);
     }
     const settings = await settingsService.getAllSettings();
     const imTokenKey = `im_user_${req.userId}`;

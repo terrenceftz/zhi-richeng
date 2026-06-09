@@ -5,6 +5,8 @@ import { useTaskStore } from '../stores/taskStore';
 import { useAuthStore } from '../stores/authStore';
 import type { Task } from '../types';
 import { getNextHolidayCountdown } from '../utils/holidays';
+import { getTeachingWeek, type SemesterConfig } from '../utils/academicCalendar';
+import client from '../api/client';
 import SmartBar from '../components/SmartBar';
 import TaskCard from '../components/tasks/TaskCard';
 import Button from '../components/ui/Button';
@@ -21,6 +23,20 @@ export default function DashboardPage() {
   const [showTodayDone, setShowTodayDone] = useState(false);
   const [quote, setQuote] = useState('');
   const holidayCountdown = useMemo(() => getNextHolidayCountdown(), []);
+  const [teachingWeek, setTeachingWeek] = useState<{ name: string; week: number | null; isBreak: boolean } | null>(null);
+
+  useEffect(() => {
+    client.get('/settings').then(({ data }) => {
+      if (data.semesterName && data.semesterStart) {
+        const config: SemesterConfig = {
+          name: data.semesterName,
+          start: data.semesterStart,
+          end: data.semesterEnd || '',
+        };
+        setTeachingWeek(getTeachingWeek(config));
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch('https://v1.hitokoto.cn/?c=a&c=b&c=c&c=d&c=i&c=k&encode=text&max_length=30')
@@ -101,6 +117,11 @@ export default function DashboardPage() {
         <div className="relative z-10">
           <h2 className="text-lg font-black">你好，{user?.name || '用户'}</h2>
           <p className="font-bold text-xs opacity-50">{new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}</p>
+          {teachingWeek && !teachingWeek.isBreak && teachingWeek.week && (
+            <p className="font-black text-sm mt-1">
+              📚 {teachingWeek.name} · 第<span className="text-base">{teachingWeek.week}</span>周
+            </p>
+          )}
           {holidayCountdown && (
             holidayCountdown.isToday ? (
               <p className="font-black text-sm mt-1">🎉 今天是<span className="underline decoration-2 underline-offset-2">{holidayCountdown.name}</span>，节日快乐！</p>
