@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Task } from '../../types';
+import { getHoliday } from '../../utils/holidays';
 
 interface DayViewProps {
   date: string;
@@ -27,11 +28,30 @@ export default function DayView({ date, tasks, onTaskClick }: DayViewProps) {
     [tasks, date]
   );
 
+  const holiday = getHoliday(date);
+  const isStatutory = holiday?.isStatutory;
+  const isWeekend = holiday?.isRestDay && !isStatutory;
+
   return (
     <div>
-      <div className="text-lg font-black mb-4">{date}</div>
+      <div className="flex items-center gap-2 mb-4">
+        <span className={`text-lg font-black ${isStatutory ? 'text-red-500' : ''}`}>{date}</span>
+        {isStatutory && holiday && (
+          <span className="text-sm font-bold text-red-400 bg-red-50 border border-red-200 rounded-lg px-2 py-0.5">
+            🏖️ {holiday.name}
+          </span>
+        )}
+        {isWeekend && (
+          <span className="text-sm font-bold text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-2 py-0.5">
+            周末
+          </span>
+        )}
+      </div>
+
       {dayTasks.length === 0 ? (
-        <p className="font-bold text-sm opacity-40 py-8 text-center">当天没有日程安排</p>
+        <p className="font-bold text-sm opacity-40 py-8 text-center">
+          {isStatutory ? '🏖️ 节假日，好好休息！' : '当天没有日程安排'}
+        </p>
       ) : (
         <div className="border-2 border-black rounded-2xl overflow-hidden">
           {HOURS.map((hour) => {

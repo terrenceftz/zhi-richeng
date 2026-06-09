@@ -44,7 +44,7 @@ export default function TaskCard({ task, onClick, compact }: TaskCardProps) {
         line.startsWith('\u{1F4CE}')
       ) {
         emailLines.push(
-          line.replace(/^[\u{1F4E7}\u{1F4CB}\u{1F4CE}]\s*/, ''),
+          line.replace(/^[📧📋📎]\s*/u, ''),
         );
       }
     }

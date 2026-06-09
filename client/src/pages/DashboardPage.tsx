@@ -4,6 +4,7 @@ import { ListChecks, CalendarDays, ChevronRight } from 'lucide-react';
 import { useTaskStore } from '../stores/taskStore';
 import { useAuthStore } from '../stores/authStore';
 import type { Task } from '../types';
+import { getNextHolidayCountdown } from '../utils/holidays';
 import SmartBar from '../components/SmartBar';
 import TaskCard from '../components/tasks/TaskCard';
 import Button from '../components/ui/Button';
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showTodayDone, setShowTodayDone] = useState(false);
   const [quote, setQuote] = useState('');
+  const holidayCountdown = useMemo(() => getNextHolidayCountdown(), []);
 
   useEffect(() => {
     fetch('https://v1.hitokoto.cn/?c=a&c=b&c=c&c=d&c=i&c=k&encode=text&max_length=30')
@@ -99,6 +101,15 @@ export default function DashboardPage() {
         <div className="relative z-10">
           <h2 className="text-lg font-black">你好，{user?.name || '用户'}</h2>
           <p className="font-bold text-xs opacity-50">{new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}</p>
+          {holidayCountdown && (
+            holidayCountdown.isToday ? (
+              <p className="font-black text-sm mt-1">🎉 今天是<span className="underline decoration-2 underline-offset-2">{holidayCountdown.name}</span>，节日快乐！</p>
+            ) : (
+              <p className="font-black text-sm mt-1">
+                🎉 距离<span className="underline decoration-2 underline-offset-2">{holidayCountdown.name}</span>还有 <span className="text-base">{holidayCountdown.daysUntil}</span> 天
+              </p>
+            )
+          )}
         </div>
         {quote && (
           <p className="font-serif italic text-sm text-black/60 max-w-[180px] text-right max-md:text-left relative z-10">&ldquo;{quote}&rdquo;</p>

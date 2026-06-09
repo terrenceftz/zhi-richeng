@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Task } from '../../types';
+import { getHoliday } from '../../utils/holidays';
 
 interface WeekViewProps {
   selectedDate: string;
@@ -32,29 +33,44 @@ export default function WeekView({ selectedDate, tasks, onTaskClick }: WeekViewP
   return (
     <div>
       <div className="grid grid-cols-7 gap-2 mb-2">
-        {dates.map((date, i) => (
-          <div
-            key={date}
-            className={`text-center p-2 rounded-xl text-sm border-2 transition-all ${
-              date === selectedDate
-                ? 'bg-blue border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black'
-                : 'border-black bg-white font-bold opacity-50'
-            }`}
-          >
-            <div>{weekDays[i]}</div>
-            <div>{date.slice(8)}</div>
-          </div>
-        ))}
+        {dates.map((date, i) => {
+          const holiday = getHoliday(date);
+          const isStatutory = holiday?.isStatutory;
+          return (
+            <div
+              key={date}
+              className={`text-center p-2 rounded-xl text-sm border-2 transition-all ${
+                date === selectedDate
+                  ? 'bg-blue border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black'
+                  : isStatutory
+                  ? 'border-red-300 bg-red-50/60 font-bold text-red-500'
+                  : 'border-black bg-white font-bold opacity-50'
+              }`}
+            >
+              <div>{weekDays[i]}</div>
+              <div>{date.slice(8)}</div>
+              {isStatutory && holiday && (
+                <div className="text-[10px] mt-0.5 opacity-80">{holiday.name}</div>
+              )}
+            </div>
+          );
+        })}
       </div>
       <div className="grid grid-cols-7 gap-2">
         {dates.map((date) => {
           const dayTasks = tasks.filter((t) => t.dueDate?.slice(0, 10) === date);
           const isToday = date === new Date().toISOString().slice(0, 10);
+          const holiday = getHoliday(date);
+          const isRestDay = holiday?.isRestDay;
           return (
             <div
               key={date}
               className={`min-h-[120px] rounded-xl p-2 space-y-1 border-2 ${
-                isToday ? 'border-black bg-blue/30' : 'border-black bg-white'
+                isToday
+                  ? 'border-black bg-blue/30'
+                  : isRestDay
+                  ? 'border-red-200 bg-red-50/30'
+                  : 'border-black bg-white'
               } ${date === selectedDate ? 'shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : ''}`}
             >
               {dayTasks.slice(0, 3).map((task) => (
