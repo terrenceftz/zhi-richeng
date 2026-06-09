@@ -3,16 +3,31 @@ import { config } from '../config';
 import { getDeepSeekApiKey } from './settings.service';
 
 let cachedClient: OpenAI | null = null;
+let cachedApiKey: string | null = null;
 
 async function getLLMClient(): Promise<OpenAI> {
-  if (cachedClient) return cachedClient;
   const apiKey = await getDeepSeekApiKey();
-  cachedClient = new OpenAI({
-    apiKey: apiKey || config.deepseek.apiKey,
-    baseURL: config.deepseek.baseURL,
-    timeout: 15000,
-  });
+  const effectiveKey = apiKey || config.deepseek.apiKey;
+  
+  // Invalidate cache if API key changed (e.g. user updated via settings)
+  if (cachedClient && cachedApiKey !== effectiveKey) {
+    cachedClient = null;
+  }
+  
+  if (!cachedClient) {
+    cachedApiKey = effectiveKey;
+    cachedClient = new OpenAI({
+      apiKey: effectiveKey,
+      baseURL: config.deepseek.baseURL,
+      timeout: 15000,
+    });
+  }
   return cachedClient;
+}
+
+export function clearLLMCache(): void {
+  cachedClient = null;
+  cachedApiKey = null;
 }
 
 function getTodayInfo(): string {
@@ -71,15 +86,16 @@ function buildExtractPrompt(): string {
 关键规则：
 - 逐段扫描，任何带日期的动作都要提取为独立任务
 - 标题必须包含动作+对象，如"学院网上审核"、"纸质材料报送至学生资助中心"、"提交电子版材料"
-- 日期推算：今年未指定年份的日期，根据上下文推断
+- 日期推算：今年未指定年份的日期，根据上下文推断；如当前为2026年，"6月8日"→"2026-06-08"
 - 日期范围如"6月8日-6月12日"→取起始日6月8日
 - 邮件提取：发送至/报送至后的邮箱→emailTo，"主题命名为"后的内容→emailSubject，材料清单→description
 - category：交/提交/报送/申报→"资料收集"，审核/审批/审查→"审核"，会议/开会→"会议"，其他→"通用"
-- priority：截止/务必→high，默认→medium
+- priority：截止/务必/紧急→high，默认→medium
 - 即使只有1条也要提取，绝不返回空数组
+- 即使文本中没有明确的"截止日期"字样，只要有日期和时间相关的动作描述，也要提取
 
-输出格式（只返回JSON数组）：
-{"tasks":[{"title":"...","dueDate":"YYYY-MM-DD","dueTime":null,"priority":"medium","category":"资料收集","emailTo":"...","emailSubject":"...","description":"..."}]}`;
+输出格式（必须严格返回如下JSON对象，不要只返回数组）：
+{"tasks":[{"title":"...","dueDate":"YYYY-MM-DD","dueTime":null,"priority":"medium","category":"资料收集","emailTo":null,"emailSubject":null,"description":null,"location":null}]}`;
 }
 
 export interface ParsedTask {
@@ -259,5 +275,18 @@ export async function extractTasks(text: string): Promise<{ tasks: ParsedTask[] 
 
   const content = response.choices[0]?.message?.content || '{"tasks":[]}';
   const cleaned = content.replace(/```json|```/g, '').trim();
-  return JSON.parse(cleaned);
+  
+  let parsed = JSON.parse(cleaned);
+  
+  // Handle LLM returning a bare array instead of {"tasks":[...]}
+  if (Array.isArray(parsed)) {
+    parsed = { tasks: parsed };
+  }
+  
+  // Ensure tasks is always an array
+  if (!parsed.tasks || !Array.isArray(parsed.tasks)) {
+    parsed = { tasks: [] };
+  }
+  
+  return parsed;
 }

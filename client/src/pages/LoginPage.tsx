@@ -1,4 +1,5 @@
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';

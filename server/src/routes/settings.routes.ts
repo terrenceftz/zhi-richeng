@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authMiddleware } from '../middleware/auth.middleware';
 import * as settingsService from '../services/settings.service';
+import { clearLLMCache } from '../services/llm.service';
 import { v4 as uuid } from 'uuid';
 
 const router = Router();
@@ -58,6 +59,7 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
     const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, regEnabled } = req.body;
     if (deepseekApiKey !== undefined) {
       await settingsService.setSetting('deepseek_api_key', deepseekApiKey);
+      clearLLMCache();
     }
     if (feishuOpenId !== undefined) {
       await settingsService.setSetting(`feishu_openid_${req.userId}`, feishuOpenId);

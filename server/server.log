@@ -1,0 +1,372 @@
+(node:3485302) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Server running on http://localhost:3002
+[提醒] 已启动
+[摘要] 已启动
+[info]: [ 'client ready' ]
+[info]: [ 'event-dispatch is ready' ]
+[info]: [
+  '[ws]',
+  'receive events or callbacks through persistent connection only available in self-build & Feishu app, Configured in:\n' +
+    '        Developer Console(开发者后台)\n' +
+    '          ->\n' +
+    '        Events and Callbacks(事件与回调)\n' +
+    '          ->\n' +
+    '        Mode of event/callback subscription(订阅方式)\n' +
+    '          ->\n' +
+    '        Receive events/callbacks through persistent connection(使用 长连接 接收事件/回调)'
+]
+[飞书] WebSocket 已连接，等待消息...
+[info]: [ '[ws]', 'ws client ready' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "57e8120f4cafa1357fe5cfd0b95cb8e8",
+  "token": "",
+  "create_time": "1779784657859",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"今天七点需要到侨缘值班签到\"}",
+    "create_time": "1779784657342",
+    "message_id": "om_x100b6e61f3df48bcb2ccea6f5ad2497",
+    "message_type": "text",
+    "u
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '✅ 已添加：侨缘值班签到\n📅 2026-05-26\n⏰ 19:00\n📍 侨缘'
+}
+[飞书] 回复成功: om_x100b6e61f38eccc4b2c4b21b317f5e3
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "4e26b2a575f3374c1204faed145f5724",
+  "token": "",
+  "create_time": "1779784668787",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"各位老师好，学校拟于6月初召开辅导员工作室推进会，其中一个环节会安排各个工作室到小组中做重点发言分享。重点发言的大概是6分钟一个人，请大家做个PPT。本期的研讨主题是：数智时代的辅导员工作室建设（供参考），具体时间和分组情况回头一并通知，请大家提前做好准备哈。 @所有人\"}",
+    "
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '✅ 已添加：准备辅导员工作室推进会PPT\n📋 待安排'
+}
+[飞书] 回复成功: om_x100b6e61f33ec888b3615a0543b7833
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "3d3e73fc48dc192c659dce0041ced42d",
+  "token": "",
+  "create_time": "1779784400937",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"今天七点需要到侨缘值班签到\"}",
+    "create_time": "1779784400465",
+    "message_id": "om_x100b6e61e3c954f8c31bd8e61d3d6e7",
+    "message_type": "text",
+    "u
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '✅ 已添加：侨缘值班签到\n📅 2026-05-26\n⏰ 19:00\n📍 侨缘'
+}
+[飞书] 回复成功: om_x100b6e618e39eedcb3c0a2f994c2f20
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[info]: [ 'client ready' ]
+[warn]: [ 'no task.task.updated_v1 handle' ]
+[飞书] 原生提醒已创建: 研究生抽签 (16:30)
+[warn]: [ 'no task.task.updated_v1 handle' ]
+[warn]: [ 'no task.task.updated_v1 handle' ]
+[warn]: [ 'no task.task.updated_v1 handle' ]
+[warn]: [ 'no task.task.updated_v1 handle' ]
+[warn]: [ 'no task.task.update_tenant_v1 handle' ]
+[warn]: [ 'no task.task.update_user_access_v2 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "338baba03e1b1060594c997969918315",
+  "token": "",
+  "create_time": "1779785306818",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"灵感智日程长文本解析还存在bug\"}",
+    "create_time": "1779785306373",
+    "message_id": "om_x100b6e61ab6f70f0c43fe9008f20846",
+    "message_type": "text",
+   
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '💡 已记录灵感：智日程长文本解析还存在bug'
+}
+[飞书] 回复成功: om_x100b6e61ab7554a8b30912062c21259
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "8da03b76bd19858ae9f982881b4be7ba",
+  "token": "",
+  "create_time": "1779783982047",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"各位老师好，学校拟于6月初召开辅导员工作室推进会，其中一个环节会安排各个工作室到小组中做重点发言分享。重点发言的大概是6分钟一个人，请大家做个PPT。本期的研讨主题是：数智时代的辅导员工作室建设（供参考），具体时间和分组情况回头一并通知，请大家提前做好准备哈。 @所有人\"}",
+    "
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '✅ 已添加：准备辅导员工作室推进会PPT\n📋 待安排'
+}
+[飞书] 回复成功: om_x100b6e62c92ffc84b4b8de4c72b9426
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "6d5bf34d9ab1269ffbcf2a259d8c9ff4",
+  "token": "",
+  "create_time": "1779784007577",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"今天七点需要到侨缘值班签到\"}",
+    "create_time": "1779784007070",
+    "message_id": "om_x100b6e61daa3c884c27871750c42732",
+    "message_type": "text",
+    "u
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '✅ 已添加：侨缘值班签到\n📅 2026-05-26\n⏰ 19:00\n📍 侨缘'
+}
+[飞书] 回复成功: om_x100b6e62c7988c8cb3020e331becbb5
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[提醒] 发送提醒: 侨缘值班签到 (19:00) -> ou_03b83ca31593403238c9ca0870997b9f
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ⏰ 日程提醒（15 分钟后）
+📌 侨缘值班签到
+🕐 19:00
+📍 侨缘
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "b321b290e1c7c48dfb4691a4ef2dea9e",
+  "token": "",
+  "create_time": "1779795035115",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"灵感黄炳超书记承办培训\"}",
+    "create_time": "1779795034644",
+    "message_id": "om_x100b6e6c0b6a14a0b341524beaeadee",
+    "message_type": "text",
+    "upd
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '💡 已记录灵感：黄炳超书记承办培训'
+}
+[飞书] 回复成功: om_x100b6e6c0b71a8b0b3c182dd5691247
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ☀️ 今日日程简报
+
+今日有3项任务，其中高优先级1项。关键事项：提交助学金名额分配表（6月5日）、学院审核公示（6月1
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "c4540b01952c11585d6ae2d6ec71fa49",
+  "token": "",
+  "create_time": "1779846709697",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"【2026年6月报送国家助学金】\\n各位老师，上午好！\\n现请各学院报送2026年本科生6月份国家助学金，研究生6、7、8月国家助学金的变动表。具体要求请阅读附件通知，注意研究生6月、7月、8月份动态管理报送表要每月单独做表。变动表请于2026年6月2日（下周二）下班前完成报送。\\n收
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '✅ 已添加：报送国家助学金变动表\n📅 2026-06-02\n⏰ 17:00\n🔥 高优先级'
+}
+[飞书] 回复成功: om_x100b6e50adb67880b3f96560cc98d06
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "368229419ccd422b82b1e634a021668a",
+  "token": "",
+  "create_time": "1779852255847",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"灵感输入今天需要做周五的ppt日期会添加到周五\"}",
+    "create_time": "1779852255387",
+    "message_id": "om_x100b6e52733ee084c315ad8f448b2b0",
+    "message_type": "tex
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '💡 已记录灵感：输入今天需要做周五的ppt日期会添加到周五'
+}
+[飞书] 回复成功: om_x100b6e5270c34088b25ae015ad69703
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "69602ab2459e07b90342312dbc949934",
+  "token": "",
+  "create_time": "1779865542828",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"灵感研究生纪律教育\"}",
+    "create_time": "1779865542308",
+    "message_id": "om_x100b6e5d32afbc88c4a9ebd134bc963",
+    "message_type": "text",
+    "updat
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '💡 已记录灵感：研究生纪律教育'
+}
+[飞书] 回复成功: om_x100b6e5d32b050a0b4cf29cbb8532e8
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ☀️ 今日日程简报
+
+今日任务共4项，其中高优先级（🔴）2项。关键事项：①报送国家助学金变动表（6月2日17:00前）
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[info]: [ 'client ready' ]
+[飞书] 原生提醒已创建: 监考 (16:20)
+[warn]: [ 'no task.task.updated_v1 handle' ]
+[warn]: [ 'no task.task.updated_v1 handle' ]
+[warn]: [ 'no task.task.updated_v1 handle' ]
+[warn]: [ 'no task.task.updated_v1 handle' ]
+[warn]: [ 'no task.task.updated_v1 handle' ]
+[warn]: [ 'no task.task.update_user_access_v2 handle' ]
+[warn]: [ 'no task.task.update_tenant_v1 handle' ]
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ☀️ 今日日程简报
+
+今日共有5项任务，其中高优先级3项。关键事项：16:20监考、17:00报送助学金变动表、6月2日
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[提醒] 发送提醒: 监考 (16:20) -> ou_03b83ca31593403238c9ca0870997b9f
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ⏰ 日程提醒（15 分钟后）
+📌 监考
+🕐 16:20
+🔥 高优先级
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ☀️ 今日日程简报
+
+今日共有4项任务，其中高优先级2项。关键事项：①报送国家助学金变动表（6月2日17:00前）；②提
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ☀️ 今日日程简报
+
+今日共有4项任务，其中高优先级2项。关键事项：①报送国家助学金变动表（6月2日17:00前）；②提
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ☀️ 今日日程简报
+
+今日共有4项任务，其中高优先级2项。关键事项：①报送国家助学金变动表（明日17:00截止）；②提交
+[info]: [ '[ws]', 'reconnect' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "6bc68e1bbd2fff4b0014d4a867b590a4",
+  "token": "",
+  "create_time": "1780306202912",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"这周需安排一次发诈宣传\"}",
+    "create_time": "1780306202314",
+    "message_id": "om_x100b6ee15f6fd444b12debd34f7b46c",
+    "message_type": "text",
+    "upd
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '✅ 已添加：安排发诈宣传\n📅 2026-06-06'
+}
+[飞书] 回复成功: om_x100b6ee15f103d30b2a5dda6daa752d
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ☀️ 今日日程简报
+
+今日共有5项任务，其中高优先级2项。关键事项：①报送国家助学金变动表（今日17:00前）；②提交国
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ☀️ 今日日程简报
+
+今日共有5项任务，其中高优先级1项。关键事项：6月5日提交助学金名额分配表（高优）、6月6日安排发
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[info]: [ 'client ready' ]
+[飞书] 提醒发送成功: ☀️ 今日日程简报
+
+今日任务共5项，其中高优先级1项。关键事项：①提交国家助学金名额分配表（明日截止）；②安排发诈宣传
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[warn]: [ 'no im.message.message_read_v1 handle' ]
+[warn]: [ 'no im.chat.access_event.bot_p2p_chat_entered_v1 handle' ]
+[飞书] 收到消息事件: {
+  "schema": "2.0",
+  "event_id": "4fc300bb839022335f8b26006c2b8fac",
+  "token": "",
+  "create_time": "1780535577812",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "1679a10e870d175d",
+  "app_id": "cli_aa9915a279391cc8",
+  "message": {
+    "chat_id": "oc_8c4a320b53f667b11f08df7f3455fd15",
+    "chat_type": "p2p",
+    "content": "{\"text\":\"今天下班前做基层就业学费代偿\"}",
+    "create_time": "1780535577245",
+    "message_id": "om_x100b6d395f5cd8b0b1cc68ac3bdab14",
+    "message_type": "text",
+    "
+[飞书] 发送回复: {
+  chatId: 'oc_8c4a320b53f667b11f08df7f3455fd15',
+  text: '✅ 已添加：做基层就业学费代偿\n📅 2026-06-04\n⏰ 18:00'
+}
+[飞书] 回复成功: om_x100b6d395f74f4a4b4b0578e1c1ca23
+[warn]: [ 'no im.message.message_read_v1 handle' ]

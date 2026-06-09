@@ -85,7 +85,7 @@ export default function SmartBar() {
       const today = new Date().toISOString().slice(0, 10);
       const nonToday = dates.filter((d) => d !== today);
       let msg = `已添加 ${tasks.length} 个任务`;
-      if (nonToday.length > 0) {
+      if (nonToday.length > 0 && nonToday[0]) {
         const d = new Date(nonToday[0]);
         msg += `，最近截止：${d.getMonth() + 1}月${d.getDate()}日`;
       }

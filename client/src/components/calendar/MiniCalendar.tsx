@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTaskStore } from '../../stores/taskStore';
+import { getHoliday } from '../../utils/holidays';
 
 interface MiniCalendarProps {
   onDateSelect?: (date: string) => void;
@@ -83,7 +84,27 @@ export default function MiniCalendar({ onDateSelect }: MiniCalendarProps) {
                     : 'text-black hover:bg-blue/50 border border-transparent'
                 }`}
               >
-                {d}
+                <span className={
+                  (() => {
+                    const ds = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const h = getHoliday(ds);
+                    if (h?.isStatutory && !isToday(d) && !isSelected(d)) return 'text-red-500';
+                    return '';
+                  })()
+                }>
+                  {d}
+                </span>
+
+                {/* 法定节假日标记：小红点 */}
+                {(() => {
+                  const ds = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                  const h = getHoliday(ds);
+                  return h?.isStatutory && (
+                    <span className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full border border-red-300 bg-red-400" />
+                  );
+                })()}
+
+                {/* 任务标记：黑点 */}
                 {datesWithTasks.has(
                   `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`
                 ) && (
@@ -95,6 +116,18 @@ export default function MiniCalendar({ onDateSelect }: MiniCalendarProps) {
             )}
           </div>
         ))}
+      </div>
+
+      {/* 图例 */}
+      <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-200">
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-black border border-black" />
+          <span className="text-[10px] font-bold opacity-50">日程</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-red-400 border border-red-300" />
+          <span className="text-[10px] font-bold opacity-50">节假日</span>
+        </div>
       </div>
     </div>
   );

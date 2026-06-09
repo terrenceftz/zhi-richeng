@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript 错误测试</title>
+    <script>
+        // 捕获全局错误
+        window.onerror = function(msg, url, line, col, error) {
+            document.getElementById('errors').innerHTML += 
+                `<div class="error">❌ ${msg}<br>位置: ${url}:${line}:${col}</div>`;
+            return true;
+        };
+        
+        // 捕获未处理的 Promise 拒绝
+        window.onunhandledrejection = function(event) {
+            document.getElementById('errors').innerHTML += 
+                `<div class="error">❌ Promise 拒绝: ${event.reason}</div>`;
+        };
+        
+        // 测试加载主应用 JS
+        window.onload = function() {
+            console.log('开始加载应用...');
+            
+            // 创建测试脚本
+            const testScript = document.createElement('script');
+            testScript.type = 'module';
+            testScript.crossOrigin = 'anonymous';
+            testScript.src = '/assets/index-n6bHT2dF.js';
+            
+            testScript.onload = function() {
+                document.getElementById('status').innerHTML = 
+                    '<div class="success">✅ JavaScript 加载成功</div>';
+            };
+            
+            testScript.onerror = function() {
+                document.getElementById('status').innerHTML = 
+                    '<div class="error">❌ JavaScript 加载失败</div>';
+            };
+            
+            document.head.appendChild(testScript);
+        };
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .success { color: green; padding: 10px; background: #e8f5e8; border-left: 4px solid green; }
+        .error { color: red; padding: 10px; background: #ffebee; border-left: 4px solid red; margin: 10px 0; }
+        .info { color: blue; padding: 10px; background: #e3f2fd; border-left: 4px solid blue; }
+        button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>JavaScript 错误测试</h1>
+    
+    <div class="info">
+        <strong>测试步骤：</strong>
+        <ol>
+            <li>检查 JavaScript 文件是否可访问</li>
+            <li>捕获 JavaScript 运行时错误</li>
+            <li>测试 API 连接</li>
+        </ol>
+    </div>
+    
+    <div id="status" class="info">正在测试...</div>
+    
+    <div id="errors"></div>
+    
+    <div>
+        <button onclick="testAPI()">测试 API 连接</button>
+        <button onclick="testAuth()">测试认证</button>
+        <button onclick="location.reload()">重新加载</button>
+    </div>
+    
+    <div id="apiResult"></div>
+    
+    <script>
+        function testAPI() {
+            const resultDiv = document.getElementById('apiResult');
+            resultDiv.innerHTML = '<div class="info">正在测试 API...</div>';
+            
+            fetch('/api/health')
+                .then(response => {
+                    resultDiv.innerHTML += `<div class="info">API 状态码: ${response.status}</div>`;
+                    return response.json();
+                })
+                .then(data => {
+                    resultDiv.innerHTML += `<div class="success">✅ API 响应: ${JSON.stringify(data)}</div>`;
+                })
+                .catch(error => {
+                    resultDiv.innerHTML += `<div class="error">❌ API 错误: ${error.message}</div>`;
+                });
+        }
+        
+        function testAuth() {
+            const resultDiv = document.getElementById('apiResult');
+            resultDiv.innerHTML = '<div class="info">正在测试认证...</div>';
+            
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: 'admin@mboker.cn',
+                    password: '123456'
+                })
+            })
+            .then(response => {
+                resultDiv.innerHTML += `<div class="info">认证状态码: ${response.status}</div>`;
+                return response.text();
+            })
+            .then(text => {
+                try {
+                    const data = JSON.parse(text);
+                    if (data.accessToken) {
+                        resultDiv.innerHTML += `<div class="success">✅ 认证成功！Token: ${data.accessToken.substring(0, 20)}...</div>`;
+                    } else {
+                        resultDiv.innerHTML += `<div class="error">❌ 认证失败: ${JSON.stringify(data)}</div>`;
+                    }
+                } catch (e) {
+                    resultDiv.innerHTML += `<div class="error">❌ 响应解析失败: ${text.substring(0, 100)}</div>`;
+                }
+            })
+            .catch(error => {
+                resultDiv.innerHTML += `<div class="error">❌ 认证请求错误: ${error.message}</div>`;
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修复验证页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .success { color: green; padding: 10px; background: #e8f5e8; border-left: 4px solid green; margin: 10px 0; }
+        .error { color: red; padding: 10px; background: #ffebee; border-left: 4px solid red; margin: 10px 0; }
+        .info { color: blue; padding: 10px; background: #e3f2fd; border-left: 4px solid blue; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🎉 前端修复验证</h1>
+    
+    <div class="info">
+        <strong>修复内容：</strong>
+        <ol>
+            <li>✅ 修复了 AnimatePresence 未定义错误</li>
+            <li>✅ 修复了 Unicode 正则表达式问题</li>
+            <li>✅ 重新构建并部署了生产版本</li>
+        </ol>
+    </div>
+    
+    <div id="testResults"></div>
+    
+    <div>
+        <button onclick="testJavaScript()">测试 JavaScript 加载</button>
+        <button onclick="testAPI()">测试 API 连接</button>
+        <button onclick="testDocumentExtraction()">测试文档提取</button>
+        <button onclick="openMainApp()">打开主应用</button>
+    </div>
+    
+    <script>
+        const resultsDiv = document.getElementById('testResults');
+        
+        function addResult(type, message) {
+            resultsDiv.innerHTML += `<div class="${type}">${message}</div>`;
+        }
+        
+        function testJavaScript() {
+            addResult('info', '正在测试 JavaScript 加载...');
+            
+            // 测试加载主应用 JS
+            const testScript = document.createElement('script');
+            testScript.type = 'module';
+            testScript.crossOrigin = 'anonymous';
+            testScript.src = '/assets/index-Dn2To98Q.js';
+            
+            testScript.onload = function() {
+                addResult('success', '✅ JavaScript 加载成功！');
+                testFramerMotion();
+            };
+            
+            testScript.onerror = function() {
+                addResult('error', '❌ JavaScript 加载失败');
+            };
+            
+            document.head.appendChild(testScript);
+        }
+        
+        function testFramerMotion() {
+            try {
+                // 测试 framer-motion 是否可用
+                if (typeof window !== 'undefined' && window.AnimatePresence) {
+                    addResult('success', '✅ AnimatePresence 已定义');
+                } else {
+                    addResult('error', '❌ AnimatePresence 未定义');
+                }
+            } catch (e) {
+                addResult('error', '❌ 测试 framer-motion 失败: ' + e.message);
+            }
+        }
+        
+        function testAPI() {
+            addResult('info', '正在测试 API 连接...');
+            
+            fetch('/api/health')
+                .then(response => {
+                    if (response.ok) {
+                        addResult('success', '✅ API 健康检查成功');
+                        return response.json();
+                    } else {
+                        addResult('error', '❌ API 健康检查失败: ' + response.status);
+                    }
+                })
+                .then(data => {
+                    if (data) {
+                        addResult('success', '✅ API 响应: ' + JSON.stringify(data));
+                    }
+                })
+                .catch(error => {
+                    addResult('error', '❌ API 连接错误: ' + error.message);
+                });
+        }
+        
+        function testDocumentExtraction() {
+            addResult('info', '正在测试文档提取功能...');
+            
+            // 先登录获取 token
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: 'admin@mboker.cn',
+                    password: '123456'
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    addResult('success', '✅ 登录请求成功');
+                    return response.json();
+                } else {
+                    return response.text().then(text => {
+                        throw new Error('登录失败: ' + text);
+                    });
+                }
+            })
+            .then(data => {
+                if (data.accessToken) {
+                    addResult('success', '✅ 获取到认证 token');
+                    
+                    // 使用 token 测试文档提取
+                    return fetch('/api/tasks/nlp/extract', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + data.accessToken
+                        },
+                        body: JSON.stringify({
+                            text: '项目报告需在明天提交至 admin@company.com'
+                        })
+                    });
+                } else {
+                    throw new Error('未获取到 accessToken');
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    addResult('success', '✅ 文档提取请求成功');
+                    return response.json();
+                } else {
+                    return response.text().then(text => {
+                        throw new Error('文档提取失败: ' + text);
+                    });
+                }
+            })
+            .then(data => {
+                addResult('success', '✅ 文档提取功能正常！响应: ' + JSON.stringify(data).substring(0, 100));
+            })
+            .catch(error => {
+                addResult('error', '❌ 测试失败: ' + error.message);
+            });
+        }
+        
+        function openMainApp() {
+            window.open('https://rc.mboker.cn', '_blank');
+        }
+        
+        // 页面加载时自动测试 JavaScript
+        window.onload = function() {
+            testJavaScript();
+            testAPI();
+        };
+    </script>
+</body>
+</html>

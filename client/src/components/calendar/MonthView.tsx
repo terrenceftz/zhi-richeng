@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Task } from '../../types';
+import { getHoliday } from '../../utils/holidays';
 
 interface MonthViewProps {
   year: number;
@@ -46,9 +47,12 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
         {days.map((d, i) => {
           if (d === null) return <div key={i} className="aspect-square bg-gray-50/50 rounded-lg" />;
           const ds = fmt(d);
+          const holiday = getHoliday(ds);
           const dayTasks = tasksByDate[ds] || [];
           const isSelected = ds === selectedDate;
           const isToday = ds === new Date().toISOString().slice(0, 10);
+          const isRestDay = holiday?.isRestDay;
+          const isStatutory = holiday?.isStatutory;
 
           return (
             <div
@@ -59,10 +63,37 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
                   ? 'bg-blue border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
                   : isToday
                   ? 'ring-2 ring-black bg-white border-black'
+                  : isRestDay
+                  ? 'bg-red-50/50 border-red-200'
                   : 'bg-white border-gray-300 hover:border-black'
               }`}
             >
-              <div className={`text-xs mb-0.5 px-0.5 font-bold ${isToday ? 'text-white bg-coral rounded-full w-5 h-5 flex items-center justify-center' : isSelected ? '' : 'opacity-50'}`}>{d}</div>
+              {/* 日期数字 */}
+              <div className="flex items-center gap-0.5 mb-0.5 px-0.5">
+                <span
+                  className={`text-xs font-bold ${
+                    isToday
+                      ? 'text-white bg-coral rounded-full w-5 h-5 flex items-center justify-center'
+                      : isStatutory
+                      ? 'text-red-500'
+                      : isRestDay
+                      ? 'text-red-400'
+                      : isSelected
+                      ? ''
+                      : 'opacity-50'
+                  }`}
+                >
+                  {d}
+                </span>
+                {/* 节假日名称 */}
+                {isStatutory && holiday && (
+                  <span className="text-[9px] font-bold text-red-400 truncate leading-none">
+                    {holiday.name}
+                  </span>
+                )}
+              </div>
+
+              {/* 任务列表 */}
               <div className="space-y-0.5">
                 {dayTasks.slice(0, 2).map((task) => (
                   <div
@@ -73,7 +104,9 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
                     {task.title}
                   </div>
                 ))}
-                {dayTasks.length > 2 && <div className="text-[10px] font-bold opacity-50 px-1">+{dayTasks.length - 2}</div>}
+                {dayTasks.length > 2 && (
+                  <div className="text-[10px] font-bold opacity-50 px-1">+{dayTasks.length - 2}</div>
+                )}
               </div>
             </div>
           );

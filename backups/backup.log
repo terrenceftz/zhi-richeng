@@ -1,0 +1,88 @@
+[2026-06-02 15:42:46] 开始备份智日程数据...
+[2026-06-02 15:42:46] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260602_154246.db
+[2026-06-02 15:42:46] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260602_154246.sql
+[2026-06-02 15:42:46] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260602_154246.env
+[2026-06-02 15:42:46] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260602_154246.prisma
+[2026-06-02 15:42:46] 压缩包创建完成: schedule_backup_20260602_154246.tar.gz
+[2026-06-02 15:42:46] 备份完成，文件大小: 4.0K
+=========================================
+[2026-06-02 15:43:23] 开始备份智日程数据...
+[2026-06-02 15:43:23] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260602_154323.db
+[2026-06-02 15:43:23] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260602_154323.sql
+[2026-06-02 15:43:23] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260602_154323.env
+[2026-06-02 15:43:23] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260602_154323.prisma
+[2026-06-02 15:43:23] 压缩包创建完成: schedule_backup_20260602_154323.tar.gz
+[2026-06-02 15:43:23] 备份完成，文件大小: 4.0K
+=========================================
+[2026-06-03 02:05:01] 开始备份智日程数据...
+[2026-06-03 02:05:01] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260603_020501.db
+[2026-06-03 02:05:01] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260603_020501.sql
+[2026-06-03 02:05:01] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260603_020501.env
+[2026-06-03 02:05:01] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260603_020501.prisma
+[2026-06-03 02:05:01] 压缩包创建完成: schedule_backup_20260603_020501.tar.gz
+[2026-06-03 02:05:01] 备份完成，文件大小: 4.0K
+=========================================
+[2026-06-04 02:15:25] 开始备份智日程数据...
+[2026-06-04 02:15:25] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260604_021525.db
+[2026-06-04 02:15:25] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260604_021525.sql
+[2026-06-04 02:15:25] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260604_021525.env
+[2026-06-04 02:15:25] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260604_021525.prisma
+[2026-06-04 02:15:25] 压缩包创建完成: schedule_backup_20260604_021525.tar.gz
+[2026-06-04 02:15:25] 备份完成，文件大小: 4.0K
+=========================================
+[2026-06-05 02:06:25] 开始备份智日程数据...
+[2026-06-05 02:06:25] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260605_020625.db
+[2026-06-05 02:06:25] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260605_020625.sql
+[2026-06-05 02:06:25] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260605_020625.env
+[2026-06-05 02:06:25] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260605_020625.prisma
+[2026-06-05 02:06:25] 压缩包创建完成: schedule_backup_20260605_020625.tar.gz
+[2026-06-05 02:06:25] 备份完成，文件大小: 4.0K
+=========================================
+[2026-06-06 02:09:43] 开始备份智日程数据...
+[2026-06-06 02:09:43] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260606_020943.db
+[2026-06-06 02:09:43] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260606_020943.sql
+[2026-06-06 02:09:43] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260606_020943.env
+[2026-06-06 02:09:43] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260606_020943.prisma
+[2026-06-06 02:09:43] 压缩包创建完成: schedule_backup_20260606_020943.tar.gz
+[2026-06-06 02:09:43] 备份完成，文件大小: 4.0K
+=========================================
+[2026-06-07 02:00:43] 开始备份智日程数据...
+[2026-06-07 02:00:43] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260607_020043.db
+[2026-06-07 02:00:43] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260607_020043.sql
+[2026-06-07 02:00:43] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260607_020043.env
+[2026-06-07 02:00:43] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260607_020043.prisma
+[2026-06-07 02:00:43] 压缩包创建完成: schedule_backup_20260607_020043.tar.gz
+[2026-06-07 02:00:43] 备份完成，文件大小: 4.0K
+=========================================
+[2026-06-08 02:07:43] 开始备份智日程数据...
+[2026-06-08 02:07:43] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_020743.db
+[2026-06-08 02:07:43] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_020743.sql
+[2026-06-08 02:07:43] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_020743.env
+[2026-06-08 02:07:43] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_020743.prisma
+[2026-06-08 02:07:43] 压缩包创建完成: schedule_backup_20260608_020743.tar.gz
+[2026-06-08 02:07:43] 备份完成，文件大小: 4.0K
+=========================================
+[2026-06-08 10:48:31] 开始备份智日程数据...
+[2026-06-08 10:48:31] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_104831.db
+[2026-06-08 10:48:31] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_104831.sql
+[2026-06-08 10:48:31] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_104831.env
+[2026-06-08 10:48:31] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_104831.prisma
+[2026-06-08 10:48:31] 压缩包创建完成: schedule_backup_20260608_104831.tar.gz
+[2026-06-08 10:48:31] 备份完成，文件大小: 4.0K
+=========================================
+[2026-06-08 10:57:54] 开始备份智日程数据...
+[2026-06-08 10:57:54] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_105754.db
+[2026-06-08 10:57:54] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_105754.sql
+[2026-06-08 10:57:54] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_105754.env
+[2026-06-08 10:57:54] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260608_105754.prisma
+[2026-06-08 10:57:54] 压缩包创建完成: schedule_backup_20260608_105754.tar.gz
+[2026-06-08 10:57:54] 备份完成，文件大小: 12K
+=========================================
+[2026-06-09 02:26:01] 开始备份智日程数据...
+[2026-06-09 02:26:01] 数据库备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260609_022601.db
+[2026-06-09 02:26:01] SQL导出完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260609_022601.sql
+[2026-06-09 02:26:01] 环境配置备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260609_022601.env
+[2026-06-09 02:26:01] Prisma schema备份完成: /root/.openclaw/workspace/agent-e7b30f31/zhi-richeng/backups/schedule_backup_20260609_022601.prisma
+[2026-06-09 02:26:01] 压缩包创建完成: schedule_backup_20260609_022601.tar.gz
+[2026-06-09 02:26:01] 备份完成，文件大小: 16K
+=========================================

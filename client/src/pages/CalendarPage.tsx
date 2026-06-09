@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { useTaskStore } from '../stores/taskStore';
 import type { Task } from '../types';
