@@ -220,7 +220,7 @@ export async function classifyIntent(text: string): Promise<'schedule' | 'query'
   const apiKey = await getDeepSeekApiKey();
   if (!apiKey) return schedulePatterns.test(text) ? 'schedule' : 'chat';
 
-  const client = new OpenAI({ apiKey, baseURL: config.deepseek.baseURL });
+  const client = await getLLMClient();
 
   const response = await client.chat.completions.create({
     model: config.deepseek.model,
@@ -245,7 +245,7 @@ export async function chat(text: string): Promise<string> {
   const apiKey = await getDeepSeekApiKey();
   if (!apiKey) return '你好！我是智日程助手，可以帮你添加日程、查询任务。试试说"明天下午3点开会"吧！';
 
-  const client = new OpenAI({ apiKey, baseURL: config.deepseek.baseURL });
+  const client = await getLLMClient();
 
   const response = await client.chat.completions.create({
     model: config.deepseek.model,
