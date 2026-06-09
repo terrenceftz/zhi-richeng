@@ -53,3 +53,39 @@ export function getTeachingWeek(semester: SemesterConfig | null): TeachingWeekIn
 
   return { name: semester.name, week, isBreak: false };
 }
+
+/**
+ * 距离寒暑假倒计时
+ * - 学期中：距学期结束（暑假）还有 X 天
+ * - 假期中（开学前）：距开学还有 X 天
+ * - 假期中（学期已结束）：返回 null（暑假中）
+ */
+export function getBreakCountdown(semester: SemesterConfig | null): { label: string; daysUntil: number } | null {
+  if (!semester || !semester.name || !semester.start) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(semester.start);
+  start.setHours(0, 0, 0, 0);
+
+  // 学期还没开始 → 寒假中，距开学
+  if (today < start) {
+    const diffMs = start.getTime() - today.getTime();
+    const daysUntil = Math.ceil(diffMs / 86400000);
+    return { label: '开学', daysUntil };
+  }
+
+  // 学期中 → 距暑假
+  if (semester.end) {
+    const end = new Date(semester.end);
+    end.setHours(0, 0, 0, 0);
+    if (today <= end) {
+      const diffMs = end.getTime() - today.getTime();
+      const daysUntil = Math.ceil(diffMs / 86400000);
+      return { label: '暑假', daysUntil };
+    }
+  }
+
+  // 暑假中（学期已结束），无下学期配置
+  return null;
+}

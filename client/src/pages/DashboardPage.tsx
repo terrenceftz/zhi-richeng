@@ -5,7 +5,7 @@ import { useTaskStore } from '../stores/taskStore';
 import { useAuthStore } from '../stores/authStore';
 import type { Task } from '../types';
 import { getNextHolidayCountdown } from '../utils/holidays';
-import { getTeachingWeek, type SemesterConfig } from '../utils/academicCalendar';
+import { getTeachingWeek, getBreakCountdown, type SemesterConfig } from '../utils/academicCalendar';
 import client from '../api/client';
 import SmartBar from '../components/SmartBar';
 import TaskCard from '../components/tasks/TaskCard';
@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [quote, setQuote] = useState('');
   const holidayCountdown = useMemo(() => getNextHolidayCountdown(), []);
   const [teachingWeek, setTeachingWeek] = useState<{ name: string; week: number | null; isBreak: boolean } | null>(null);
+  const [breakCountdown, setBreakCountdown] = useState<{ label: string; daysUntil: number } | null>(null);
 
   useEffect(() => {
     client.get('/settings').then(({ data }) => {
@@ -34,6 +35,7 @@ export default function DashboardPage() {
           end: data.semesterEnd || '',
         };
         setTeachingWeek(getTeachingWeek(config));
+        setBreakCountdown(getBreakCountdown(config));
       }
     }).catch(() => {});
   }, []);
@@ -115,8 +117,9 @@ export default function DashboardPage() {
         <svg className="absolute -right-1 -top-1 w-7 h-7 opacity-50" viewBox="0 0 24 24"><path d="M12 0l3 8 8 3-8 3-3 8-3-8L1 11l8-3 3-8z" fill="#FFD700" stroke="#000" strokeWidth="1"/></svg>
         <svg className="absolute right-16 -bottom-2 w-4 h-4 opacity-30" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="#000" strokeWidth="1.5"/></svg>
         <div className="relative z-10">
-          <h2 className="text-lg font-black">你好，{user?.name || '用户'}</h2>
-          <p className="font-bold text-xs opacity-50">{new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}</p>
+          <h2 className="text-lg font-black">
+            你好，{user?.name || '用户'} · {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
+          </h2>
           {teachingWeek && !teachingWeek.isBreak && teachingWeek.week && (
             <p className="font-black text-sm mt-1">
               📚 {teachingWeek.name} · 第<span className="text-base">{teachingWeek.week}</span>周
@@ -130,6 +133,11 @@ export default function DashboardPage() {
                 🎉 距离<span className="underline decoration-2 underline-offset-2">{holidayCountdown.name}</span>还有 <span className="text-base">{holidayCountdown.daysUntil}</span> 天
               </p>
             )
+          )}
+          {breakCountdown && (
+            <p className="font-black text-sm mt-1">
+              🏖️ 距离<span className="underline decoration-2 underline-offset-2">{breakCountdown.label}</span>还有 <span className="text-base">{breakCountdown.daysUntil}</span> 天
+            </p>
           )}
         </div>
         {quote && (
