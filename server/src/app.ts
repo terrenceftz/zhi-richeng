@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import morgan from 'morgan';
 import { config } from './config';
 import { errorMiddleware } from './middleware/error.middleware';
 import authRoutes from './routes/auth.routes';
@@ -13,6 +14,10 @@ import backupRoutes from './routes/backup.routes';
 const app = express();
 
 app.set('trust proxy', 1);
+
+// 请求日志：开发环境用 dev 格式，生产环境用 combined
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
 app.use(cors({ origin: config.clientUrl, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 

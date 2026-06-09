@@ -10,6 +10,7 @@ import SettingsPage from './pages/SettingsPage';
 import InspirationPage from './pages/InspirationPage';
 import AppLayout from './components/layout/AppLayout';
 import AuthLayout from './components/layout/AuthLayout';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -25,6 +26,7 @@ export default function App() {
   }, [theme]);
 
   return (
+    <ErrorBoundary>
     <BrowserRouter>
       <Routes>
         <Route element={<AuthLayout />}>
@@ -40,5 +42,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }
