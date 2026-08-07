@@ -30,3 +30,4 @@ server/backups/
 # 其他
 .superpowers
 .zcode/
+*.tsbuildinfo
