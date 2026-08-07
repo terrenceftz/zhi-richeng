@@ -338,9 +338,9 @@ export async function extractFollowUp(text: string): Promise<{ studentName: stri
 
 /** 从学生查询语句中提取搜索关键词（姓名/班级/学号） */
 export async function extractStudentQueryKeyword(text: string): Promise<string | null> {
-  // 去掉常见前缀动词
+  // 去掉常见前缀动词（多字前缀在前，避免「查一下张三」残留「一下」）
   const cleaned = text
-    .replace(/^(我想查|帮我查|查一下|查询|查找|看看|找一下|了解|查看)\s*/g, '')
+    .replace(/^(我想查|帮我查|查一查|查一下|查查|查询|查找|查看|搜一下|搜索|搜|看看|找一下|了解)\s*/g, '')
     .replace(/(的信息|的资料|的情况|的联系方式|的台账|详细信息|信息)\s*$/g, '')
     .replace(/^(学生|同学)\s*/g, '')
     .trim();
