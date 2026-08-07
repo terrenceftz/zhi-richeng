@@ -8,13 +8,19 @@ import { getDeepSeekApiKey } from './settings.service';
 const CHECK_INTERVAL = 60_000;
 const DEFAULT_HOUR = 8;
 let intervalId: ReturnType<typeof setInterval> | null = null;
-const sentToday = new Set<string>(); // "userId_date" to avoid duplicate
 
 export function startDigestService(): void {
   if (intervalId) return;
   console.log('[摘要] 已启动');
   checkAndDigest();
   intervalId = setInterval(checkAndDigest, CHECK_INTERVAL);
+}
+
+export function stopDigestService(): void {
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
 }
 
 async function checkAndDigest(): Promise<void> {
@@ -26,14 +32,18 @@ async function checkAndDigest(): Promise<void> {
     if (!digestEnabled) return;
 
     const now = new Date();
-    if (now.getHours() !== digestHour || now.getMinutes() > 1) return;
+    // 触发窗口：当小时 == digestHour 且在前 5 分钟内（比原来 2 分钟更宽，避免重启漏发）
+    if (now.getHours() !== digestHour || now.getMinutes() > 5) return;
 
     const today = now.toISOString().slice(0, 10);
     const users = await prisma.user.findMany();
 
     for (const user of users) {
-      const key = `${user.id}_${today}`;
-      if (sentToday.has(key)) continue;
+      // 持久化去重：当天已发则跳过（重启不会重复/漏发）
+      const already = await prisma.reminderLog.findUnique({
+        where: { taskId_key: { taskId: user.id, key: `digest_${today}` } },
+      });
+      if (already) continue;
 
       const openId = await settingsService.getSetting(`feishu_openid_${user.id}`);
       if (!openId) continue;
@@ -51,22 +61,33 @@ async function checkAndDigest(): Promise<void> {
         take: 20,
       });
 
-      if (tasks.length === 0) continue;
+      // 逾期任务：截止时间已过且未完成
+      const overdueTasks = await prisma.task.findMany({
+        where: {
+          userId: user.id,
+          status: { not: 'done' },
+          dueDate: { lt: new Date(today) },
+        },
+        orderBy: [{ dueDate: 'asc' }],
+        take: 10,
+      });
+
+      if (tasks.length === 0 && overdueTasks.length === 0) continue;
 
       // Generate summary
       const summary = await generateSummary(tasks, today);
-      const msg = `☀️ 今日日程简报\n\n${summary}`;
+      const overdueSection = overdueTasks.length > 0
+        ? `\n\n🔴 逾期任务（${overdueTasks.length}）\n${overdueTasks.map((t) =>
+            `  ⚠️ ${t.title}${t.dueDate ? `（截止 ${new Date(t.dueDate).toISOString().slice(0, 10)}）` : ''}`
+          ).join('\n')}\n请尽快处理！`
+        : '';
+      const msg = `☀️ 今日日程简报\n\n${summary}${overdueSection}`;
 
       await sendReminder(openId, msg);
-      sentToday.add(key);
-
-      // Clean old keys (remove entries older than 3 days)
-      if (sentToday.size > 500) {
-        const cutoff = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
-        for (const k of sentToday) {
-          const datePart = k.split('_').pop();
-          if (datePart && datePart < cutoff) sentToday.delete(k);
-        }
+      try {
+        await prisma.reminderLog.create({ data: { taskId: user.id, key: `digest_${today}` } });
+      } catch {
+        // 唯一约束冲突 = 已记录，忽略
       }
     }
   } catch (err) {

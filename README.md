@@ -1,6 +1,6 @@
-# 智日程 (ZhiRicheng)
+# 智日程 · 辅导员智能工作台 (ZhiRicheng)
 
-AI 驱动的私人智能日程管理应用，面向高校辅导员的琐碎日程管理场景。
+AI 驱动的高校辅导员智能工作台，覆盖日程任务、学生花名册、谈心谈话、通知与材料上报全流程，集成飞书自动提醒与每日简报。
 
 ## 功能
 
@@ -26,6 +26,14 @@ AI 驱动的私人智能日程管理应用，面向高校辅导员的琐碎日�
 | 地点标记 | 记录会议室、教室等位置信息 |
 | 提醒开关 | 每个任务可独立控制是否推送提醒 |
 
+### 辅导员专属模块（新增）
+
+| 模块 | 说明 |
+|------|------|
+| **学生花名册** | 按班级管理学生（学号/联系方式/宿舍/关注标签），支持搜索、批量 JSON 导入 |
+| **谈心谈话记录** | 每个学生可记录多条谈心（日常/学业/心理/违纪/就业），形成时间线 |
+| **通知与材料上报看板** | 按状态（待处理/进行中/已完成）分栏；粘贴通知全文 → AI 提取标题/来源/截止/材料清单，可一键创建关联任务；材料项逐项勾选「已上报」，全部完成后自动置为已完成 |
+
 ### 灵感记录
 
 | 渠道 | 方式 |
@@ -39,37 +47,66 @@ AI 驱动的私人智能日程管理应用，面向高校辅导员的琐碎日�
 |------|------|
 | **消息添加任务** | @机器人发送自然语言，自动解析并创建 |
 | **灵感记录** | 以 `灵感` 开头发送，自动存入灵感列表 |
+| **台账跟进记录** | 发送「台账跟进 张三：内容」自动给指定学生添加心理台账跟进记录，自动标记台账学生（详见下方示例） |
+| **学生信息查询** | 发送「查张三」「台账列表」等自然语言查询学生信息 |
 | **原生提醒** | 创建飞书任务，到时间弹出原生通知 |
-| **文字提醒** | 提前 15 分钟发送文字消息提醒（时间可调） |
-| **每日简报** | 早 8 点自动推送当日任务摘要 |
-| **WebSocket 长连接** | 无需公网 IP，本地即可开发调试 |
+| **文字提醒** | 提前 N 分钟发送文字消息提醒（时间可调，持久化去重） |
+| **每日简报** | 早 8 点自动推送当日任务摘要（持久化，重启不重复/漏发） |
+| **WebSocket 长连接** | 无需公网 IP，本地即可开发调试，断线自动重连 |
+
+**飞书自然语言台账跟进示例**（发消息给机器人）：
+
+```
+台账跟进 xxx：今天谈话情绪稳定多了，愿意继续咨询
+给xxx添加台账跟进：家长已联系，建议心理咨询中心介入
+记录xxx的心理跟进：成绩有所回升
+```
+
+- 支持按姓名或学号定位学生；多学生重名时会列出候选让你选择
+- 未在台账中的学生会**自动纳入台账**并建档
+- 也支持「昨天」「2026年8月5日」等日期描述（不写默认当天）
 
 ### UI
 
 | 特性 | 说明 |
 |------|------|
-| 暗黑/亮色模式 | CSS 变量驱动，一键切换 |
-| 响应式布局 | 桌面双栏 / 平板单栏 / 手机底部导航 |
-| 动画过渡 | Framer Motion，任务增删有动画效果 |
-| 高优标记 | 高优先级任务红色边框 + 外发光 + 标题加粗 |
+| 现代专业 SaaS 风 | 靛蓝主色、柔和阴影、清晰层次、圆角卡片 |
+| 亮/暗双主题 | 真正可用的深色模式，跟随系统或手动切换，全组件适配 |
+| 响应式布局 | 桌面固定侧栏 / 移动端汉堡抽屉，主区可滚动 |
+| 动画过渡 | Framer Motion，任务增删、抽屉、Toast 均有动画 |
+| 无障碍 | 焦点环、对话框焦点陷阱、Escape 关闭、aria 标签 |
+| 全局 Toast | 统一的成功/错误/信息提示，替代散落的静默吞错 |
+
+### 安全（本轮重点修复）
+
+| 修复 | 说明 |
+|------|------|
+| 备份接口 RCE 消除 | 移除 `sqlite3 .dump` / 管道执行任意 SQL；改为二进制 .db 文件复制 + 魔数校验；**仅管理员**可备份/恢复 |
+| 密钥泄漏修复 | `GET /api/settings` 不再返回明文 DeepSeek Key，仅返回 `hasDeepSeekKey` 布尔 |
+| 角色权限 | 新增 `User.role` 字段（user/admin），`requireAdmin` 中间件，替代硬编码邮箱鉴权 |
+| JWT 硬化 | 非 production/test 环境也拒绝默认空密钥；refresh 轮换改为事务+计数防并发重放 |
+| 错误信息硬化 | 500 错误统一返回「服务器内部错误」，不向客户端泄漏 stack/Prisma 细节 |
+| 接口限流 | LLM 类接口与 IM 接口加 express-rate-limit |
+| 输入校验 | 任务创建/更新字段白名单过滤（zod + sanitize），防越权写入 |
 
 ---
 
 ## 技术栈
 
 | 层 | 选型 |
-|----|------|
-| 前端框架 | React 18 + TypeScript |
+|----|----|
+| 前端框架 | React 19 + TypeScript |
 | 构建工具 | Vite 5 |
-| UI 样式 | TailwindCSS 3 |
+| UI 样式 | TailwindCSS 3（靛蓝主色 + slate 中性色 + darkMode:class） |
 | 动效 | Framer Motion |
 | 状态管理 | Zustand |
 | 后端框架 | Express + TypeScript |
 | ORM | Prisma |
 | 数据库 | SQLite（可切换 PostgreSQL） |
-| 认证 | JWT (access + refresh token) |
+| 认证 | JWT (access + refresh token，role 携带在 token) |
 | LLM | DeepSeek API (OpenAI SDK 兼容) |
 | 飞书 SDK | @larksuiteoapi/node-sdk |
+| 校验 | zod（请求体校验） |
 
 ---
 
@@ -215,6 +252,39 @@ zhi-richeng/
 | POST | /api/ideas | 创建 `{ content, source? }` |
 | DELETE | /api/ideas/:id | 删除 |
 
+### 学生花名册（新增）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/students | 列表 `?q=&className=` |
+| GET | /api/students/classes | 所有班级（去重） |
+| GET | /api/students/:id | 详情（含谈心记录） |
+| POST | /api/students | 创建 |
+| PUT | /api/students/:id | 更新 |
+| DELETE | /api/students/:id | 删除 |
+| POST | /api/students/import | 批量导入（JSON 数组） |
+
+### 谈心谈话（新增）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/counseling | 列表 `?studentId=&from=&to=` |
+| POST | /api/counseling | 创建 `{ studentId, date, type, content, followUp? }` |
+| PUT | /api/counseling/:id | 更新 |
+| DELETE | /api/counseling/:id | 删除 |
+
+### 通知与材料上报（新增）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/notices | 列表 `?status=` |
+| GET | /api/notices/:id | 详情 |
+| POST | /api/notices | 创建 |
+| PUT | /api/notices/:id | 更新 |
+| PATCH | /api/notices/:id/materials/:index | 切换材料项上报状态 `{ submitted }` |
+| DELETE | /api/notices/:id | 删除 |
+| POST | /api/notices/from-text | AI 解析通知文本生成通知（可选创建关联任务） |
+
 ### 设置
 
 | 方法 | 路径 | 说明 |
@@ -223,12 +293,21 @@ zhi-richeng/
 | PUT | /api/settings | 更新配置 |
 | POST | /api/settings/regenerate-im-token | 重新生成 IM token |
 
-### 用户可以
+### 用户
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | /api/users/me | 个人信息 |
+| GET | /api/users/me | 个人信息（含 role） |
 | PUT | /api/users/me | 更新信息 `{ name?, password? }` |
+| GET | /api/users | 列出全部用户（仅管理员） |
+| DELETE | /api/users/:id | 删除用户（仅管理员） |
+
+### 备份（仅管理员）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/backup | 下载 sqlite .db 文件（二进制，非 SQL） |
+| POST | /api/backup/restore | 上传 .db 文件恢复（魔数校验，不执行任意 SQL） |
 
 ---
 
@@ -263,11 +342,15 @@ zhi-richeng/
 
 | 模型 | 说明 |
 |------|------|
-| User | 用户（邮箱、密码、昵称） |
-| Task | 任务（标题、描述、地点、优先级、状态、类型、截止日期/时间、标签、提醒开关、子任务） |
-| RefreshToken | JWT 刷新令牌 |
-| Setting | 键值对配置（API Key、飞书凭证等） |
+| User | 用户（邮箱、密码、昵称、role 角色） |
+| Task | 任务（标题、描述、地点、优先级、状态、类型、截止日期/时间、标签、提醒开关、子任务、sortOrder） |
+| RefreshToken | JWT 刷新令牌（带 expiresAt，定时清理） |
+| Setting | 键值对配置（API Key 掩码、飞书凭证等） |
 | Idea | 灵感记录（内容、来源、时间） |
+| Student | 学生花名册（姓名、学号、班级、性别、电话、宿舍、关注标签、备注） |
+| Counseling | 谈心谈话记录（学生、日期、类型、内容、跟进） |
+| Notice | 通知与材料上报（标题、来源、截止、材料清单 JSON、状态、关联 taskId） |
+| ReminderLog | 提醒/简报发送去重（taskId + key 唯一，持久化） |
 
 ---
 

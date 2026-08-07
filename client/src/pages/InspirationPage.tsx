@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbulb, Send, Smartphone, Monitor, Trash2 } from 'lucide-react';
 import client from '../api/client';
+import { useToastStore } from '../stores/toastStore';
+import { EmptyState } from '../components/ui/Feedback';
 
 interface Idea {
   id: string;
@@ -15,17 +17,22 @@ export default function InspirationPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    loadIdeas();
-  }, []);
+  const toast = useToastStore();
 
   const loadIdeas = async () => {
     try {
       const { data } = await client.get('/ideas');
       setIdeas(data.ideas);
-    } catch {}
+    } catch {
+      toast.error('加载灵感失败');
+    }
   };
+
+  useEffect(() => {
+    // 数据获取是 effect 的合法用途；此处关闭 react-hooks 编译器的过严规则
+    // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+    loadIdeas();
+  }, []);
 
   const addIdea = async () => {
     if (!input.trim()) return;
@@ -35,7 +42,9 @@ export default function InspirationPage() {
       setIdeas([data.idea, ...ideas]);
       setInput('');
       inputRef.current?.focus();
-    } catch {} finally {
+    } catch {
+      toast.error('保存失败');
+    } finally {
       setLoading(false);
     }
   };
@@ -44,13 +53,14 @@ export default function InspirationPage() {
     try {
       await client.delete(`/ideas/${id}`);
       setIdeas(ideas.filter((i) => i.id !== id));
-    } catch {}
+      toast.success('已删除');
+    } catch {
+      toast.error('删除失败');
+    }
   };
 
-  const cardColors = ['bg-rose', 'bg-blue', 'bg-mint', 'bg-cream', 'bg-lavender', 'bg-coral/20'];
-  const getCardColor = (index: number) => cardColors[index % cardColors.length];
-
   const timeAgo = (d: string) => {
+    // eslint-disable-next-line react-hooks/purity
     const diff = Date.now() - new Date(d).getTime();
     const min = Math.floor(diff / 60000);
     if (min < 1) return '刚刚';
@@ -62,72 +72,61 @@ export default function InspirationPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-black mb-1 flex items-center gap-2">
-        <Lightbulb className="w-6 h-6" />
+      <h2 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+        <Lightbulb className="h-6 w-6 text-amber-500" />
         灵感记录
       </h2>
-      <p className="font-bold text-sm opacity-50 mb-6">随时记录一闪而过的想法，也可以在飞书中 @机器人 发送消息自动记录</p>
+      <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">随时记录一闪而过的想法，也可以在飞书中 @机器人 发送消息自动记录</p>
 
-      {/* Input */}
-      <div className="flex items-center gap-2 mb-8">
-        <div className="flex-1 flex items-center gap-2 bg-white border-2 border-black rounded-xl px-3 py-2.5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus-within:border-black transition-all">
-          <Lightbulb className="w-5 h-5 flex-shrink-0" />
+      <div className="mb-8 flex items-center gap-2">
+        <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm transition-colors focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 dark:border-slate-800 dark:bg-slate-900">
+          <Lightbulb className="h-5 w-5 shrink-0 text-amber-500" />
           <input
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addIdea(); }
-            }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addIdea(); } }}
             placeholder="记录一个想法..."
-            className="flex-1 bg-transparent placeholder-gray-400 text-sm py-1 focus:outline-none font-bold"
+            className="flex-1 bg-transparent py-1 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-slate-100"
           />
         </div>
         <button
           onClick={addIdea}
           disabled={loading || !input.trim()}
-          className="px-4 py-2.5 bg-black text-white text-sm rounded-xl font-bold border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 flex items-center gap-2"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-50"
         >
-          <Send className="w-3.5 h-3.5" />
+          <Send className="h-3.5 w-3.5" />
           记录
         </button>
       </div>
 
-      {/* List */}
       <AnimatePresence>
         {ideas.length === 0 ? (
-          <div className="text-center py-16">
-            <Lightbulb className="w-16 h-16 mx-auto mb-4 opacity-30" />
-            <p className="text-sm font-bold opacity-50">还没有灵感，开始记录吧</p>
-            <p className="text-xs font-bold opacity-40 mt-2">飞书 @机器人 发送消息也会自动记录</p>
-          </div>
+          <EmptyState title="还没有灵感，开始记录吧" hint="飞书 @机器人 发送消息也会自动记录" icon={<Lightbulb className="h-6 w-6" />} />
         ) : (
           <div className="space-y-3">
-            {ideas.map((idea, i) => (
+            {ideas.map((idea) => (
               <motion.div
                 key={idea.id}
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8, height: 0 }}
-                className={`${getCardColor(i)} border-2 border-black rounded-2xl p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all`}
+                className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-card-hover dark:border-slate-800 dark:bg-slate-900"
               >
-                <div className="flex items-start gap-4">
-                  <span className="mt-0.5 flex-shrink-0 w-8 h-8 bg-white border-2 border-black rounded-xl flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                    {idea.source === 'feishu' ? (
-                      <Smartphone className="w-4 h-4" />
-                    ) : (
-                      <Monitor className="w-4 h-4" />
-                    )}
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
+                    {idea.source === 'feishu' ? <Smartphone className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
                   </span>
-                  <p className="flex-1 text-base font-black leading-relaxed">{idea.content}</p>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-xs font-bold bg-white border-2 border-black rounded-full px-3 py-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">{timeAgo(idea.createdAt)}</span>
+                  <p className="flex-1 text-sm leading-relaxed text-slate-800 dark:text-slate-200">{idea.content}</p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">{timeAgo(idea.createdAt)}</span>
                     <button
                       onClick={() => deleteIdea(idea.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-all bg-white border-2 border-black rounded-xl p-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-rose"
+                      aria-label="删除"
+                      className="rounded-lg p-1.5 text-slate-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-500/10"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>

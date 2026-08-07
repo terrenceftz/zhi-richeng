@@ -48,8 +48,12 @@ export async function getTasks(userId: string, filters: TaskFilters) {
   if (filters.priority) where.priority = filters.priority;
   if (filters.category) where.category = filters.category;
   if (filters.date) {
-    const d = new Date(filters.date);
-    where.dueDate = { equals: d };
+    // 修复：按「当天 00:00 ~ 次日 00:00」范围过滤，原 equals 永不命中
+    const start = new Date(filters.date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    where.dueDate = { gte: start, lt: end };
   }
 
   const tasks = await prisma.task.findMany({
@@ -67,6 +71,23 @@ export async function getTaskById(userId: string, taskId: string) {
   });
   if (!task) throw Object.assign(new Error('任务不存在'), { statusCode: 404 });
   return parseTags(task);
+}
+
+/** 逾期任务：截止时间已过且未完成 */
+export async function getOverdueTasks(userId: string) {
+  const now = new Date();
+  const tasks = await prisma.task.findMany({
+    where: {
+      userId,
+      status: { not: 'done' },
+      OR: [
+        { dueDate: { lt: now } },
+      ],
+    },
+    orderBy: [{ dueDate: 'asc' }, { priority: 'asc' }],
+    include: { children: true },
+  });
+  return parseTagsList(tasks);
 }
 
 export async function createTask(userId: string, input: CreateTaskInput) {
@@ -106,11 +127,13 @@ export async function createTasksBatch(userId: string, inputs: CreateTaskInput[]
           userId,
           title: input.title,
           description: input.description || null,
+          location: input.location || null,
           status: input.status || 'todo',
           priority: input.priority || 'medium',
           category: input.category || null,
           dueDate: input.dueDate ? new Date(input.dueDate) : null,
           dueTime: input.dueTime || null,
+          remind: input.remind !== undefined ? input.remind : true,
           tags: stringifyTags(input.tags),
           sortOrder: nextOrder++,
         },
@@ -122,12 +145,35 @@ export async function createTasksBatch(userId: string, inputs: CreateTaskInput[]
   return tasks;
 }
 
+/** 校验 parentId 不指向自身、且不会形成环 */
+async function assertParentValid(userId: string, taskId: string, parentId: string | null | undefined) {
+  if (!parentId) return;
+  if (parentId === taskId) {
+    throw Object.assign(new Error('不能将任务设为自身的子任务'), { statusCode: 400 });
+  }
+  // 向上追溯，最多 20 层，检测环
+  let current = parentId;
+  const visited = new Set<string>([taskId]);
+  for (let i = 0; i < 20; i++) {
+    if (visited.has(current)) {
+      throw Object.assign(new Error('检测到父子关系环，已拒绝'), { statusCode: 400 });
+    }
+    visited.add(current);
+    const node = await prisma.task.findFirst({ where: { id: current, userId }, select: { parentId: true } });
+    if (!node) break;
+    if (!node.parentId) break;
+    current = node.parentId;
+  }
+}
+
 export async function updateTask(userId: string, taskId: string, input: UpdateTaskInput) {
   await getTaskById(userId, taskId);
+  await assertParentValid(userId, taskId, input.parentId);
 
   const data: any = { ...input };
   if (input.tags !== undefined) data.tags = stringifyTags(input.tags);
   if (input.dueDate !== undefined) data.dueDate = input.dueDate ? new Date(input.dueDate) : null;
+  // 禁止越权改写这些字段
   delete data.id;
   delete data.userId;
   delete data.createdAt;
@@ -149,7 +195,7 @@ export async function updateTaskStatus(userId: string, taskId: string, status: s
 }
 
 export async function reorderTasks(userId: string, orderedIds: string[]) {
-  const updates = orderedIds.map((id, index) =>
+  const updates = orderedIds.slice(0, 500).map((id, index) =>
     prisma.task.updateMany({ where: { id, userId }, data: { sortOrder: index } })
   );
   await prisma.$transaction(updates);

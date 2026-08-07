@@ -3,6 +3,7 @@ import { config } from '../config';
 
 export interface TokenPayload {
   userId: string;
+  role?: string;
 }
 
 const accessTokenOptions: SignOptions = { expiresIn: config.jwt.accessExpiresIn as SignOptions['expiresIn'] };

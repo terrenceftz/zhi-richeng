@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Task } from '../../types';
+import { PRIORITY_COLORS, isOverdue } from '../../types';
 import { getHoliday } from '../../utils/holidays';
 
 interface DayViewProps {
@@ -8,18 +9,12 @@ interface DayViewProps {
   onTaskClick: (task: Task) => void;
 }
 
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 07:00 - 20:00
 
-const priorityBg: Record<string, string> = {
-  high: 'bg-rose',
-  medium: 'bg-cream',
-  low: 'bg-blue',
-};
-
-const priorityBorder: Record<string, string> = {
-  high: 'border-red-400',
-  medium: 'border-yellow-500',
-  low: 'border-blue-400',
+const prioritySoft: Record<string, string> = {
+  high: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/30',
+  medium: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30',
+  low: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/30',
 };
 
 export default function DayView({ date, tasks, onTaskClick }: DayViewProps) {
@@ -32,46 +27,63 @@ export default function DayView({ date, tasks, onTaskClick }: DayViewProps) {
   const isStatutory = holiday?.isStatutory;
   const isWeekend = holiday?.isRestDay && !isStatutory;
 
+  // 无时间的任务单列展示
+  const allDayTasks = dayTasks.filter((t) => !t.dueTime);
+  const timedTasks = dayTasks.filter((t) => t.dueTime);
+
   return (
     <div>
-      <div className="flex items-center gap-2 mb-4">
-        <span className={`text-lg font-black ${isStatutory ? 'text-red-500' : ''}`}>{date}</span>
+      <div className="mb-4 flex items-center gap-2">
+        <span className={`text-base font-semibold ${isStatutory ? 'text-red-500' : 'text-slate-900 dark:text-slate-100'}`}>{date}</span>
         {isStatutory && holiday && (
-          <span className="text-sm font-bold text-red-400 bg-red-50 border border-red-200 rounded-lg px-2 py-0.5">
+          <span className="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-500 dark:border-red-500/30 dark:bg-red-500/10">
             🏖️ {holiday.name}
           </span>
         )}
         {isWeekend && (
-          <span className="text-sm font-bold text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-2 py-0.5">
+          <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-800/50">
             周末
           </span>
         )}
       </div>
 
-      {dayTasks.length === 0 ? (
-        <p className="font-bold text-sm opacity-40 py-8 text-center">
+      {allDayTasks.length > 0 && (
+        <div className="mb-3 space-y-1">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">全天</p>
+          {allDayTasks.map((task) => (
+            <div key={task.id} onClick={() => onTaskClick(task)} className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium ${prioritySoft[task.priority] || prioritySoft.medium}`}>
+              {task.title}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {timedTasks.length === 0 && allDayTasks.length === 0 ? (
+        <p className="py-8 text-center text-sm text-slate-400">
           {isStatutory ? '🏖️ 节假日，好好休息！' : '当天没有日程安排'}
         </p>
       ) : (
-        <div className="border-2 border-black rounded-2xl overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
           {HOURS.map((hour) => {
             const hourStr = `${String(hour).padStart(2, '0')}:00`;
-            const hourTasks = dayTasks.filter((t) => t.dueTime && t.dueTime.startsWith(String(hour).padStart(2, '0')));
+            const hourTasks = timedTasks.filter((t) => t.dueTime && t.dueTime.startsWith(String(hour).padStart(2, '0')));
             return (
-              <div key={hour} className="flex border-t-2 border-black first:border-t-0 min-h-[56px]">
-                <div className="w-16 text-xs font-bold py-3 flex-shrink-0 border-r-2 border-black bg-gray-50 px-2">{hourStr}</div>
-                <div className="flex-1 py-1 px-1 space-y-1 bg-white">
+              <div key={hour} className="flex min-h-[52px] border-t border-slate-100 first:border-t-0 dark:border-slate-800">
+                <div className="w-16 shrink-0 border-r border-slate-100 bg-slate-50/50 px-2 py-2 text-xs text-slate-400 dark:border-slate-800 dark:bg-slate-800/30">{hourStr}</div>
+                <div className="flex-1 space-y-1 bg-white px-1 py-1 dark:bg-slate-900">
                   {hourTasks.map((task) => (
                     <div
                       key={task.id}
                       onClick={() => onTaskClick(task)}
-                      className={`border-2 border-black rounded-xl px-3 py-2 cursor-pointer transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${priorityBg[task.priority] || 'bg-white'}`}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-shadow hover:shadow-sm ${
+                        isOverdue(task)
+                          ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300'
+                          : prioritySoft[task.priority] || prioritySoft.medium
+                      }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full border border-black flex-shrink-0 ${priorityBorder[task.priority] || 'bg-gray-400'}`} style={{ backgroundColor: task.priority === 'high' ? '#f7768e' : task.priority === 'medium' ? '#e2b714' : '#7aa2f7' }} />
-                        <span className="text-sm font-bold">{task.title}</span>
-                        {task.dueTime && <span className="text-xs font-bold opacity-50 ml-auto">{task.dueTime}</span>}
-                      </div>
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: isOverdue(task) ? '#ef4444' : PRIORITY_COLORS[task.priority] }} />
+                      <span className={`truncate font-medium ${isOverdue(task) ? 'line-through' : ''}`}>{isOverdue(task) ? '🔴 ' : ''}{task.title}</span>
+                      {task.dueTime && <span className="ml-auto text-xs opacity-70">{task.dueTime}</span>}
                     </div>
                   ))}
                 </div>

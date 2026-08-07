@@ -2,13 +2,23 @@ import { useState, type KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, CheckCircle, FileText, MessageCircle, X } from 'lucide-react';
 import { useTaskStore } from '../stores/taskStore';
+import { useToastStore } from '../stores/toastStore';
 import type { ParsedTask } from '../types';
 import Button from './ui/Button';
+import Badge, { PriorityBadge } from './ui/Badge';
 import client from '../api/client';
+
+type ApiErr = { response?: { data?: { message?: string } }; message?: string };
+const errMsg = (e: unknown, fallback: string) => {
+  const err = e as ApiErr;
+  return err?.response?.data?.message || err?.message || fallback;
+};
+
+type Mode = 'chat' | 'extract';
 
 export default function SmartBar() {
   const [text, setText] = useState('');
-  const [mode, setMode] = useState<'chat' | 'extract'>('chat');
+  const [mode, setMode] = useState<Mode>('chat');
   const [result, setResult] = useState<{
     type: 'schedule' | 'query' | 'chat';
     parsed?: ParsedTask;
@@ -19,8 +29,8 @@ export default function SmartBar() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const { confirmNLP, fetchTasks } = useTaskStore();
+  const toast = useToastStore();
 
   const handleChatSubmit = async () => {
     if (!text.trim()) return;
@@ -30,8 +40,8 @@ export default function SmartBar() {
     try {
       const { data } = await client.post('/tasks/smart', { text: text.trim() });
       setResult(data);
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || '处理失败');
+    } catch (e) {
+      setError(errMsg(e, '处理失败'));
     } finally {
       setIsProcessing(false);
     }
@@ -45,13 +55,13 @@ export default function SmartBar() {
     try {
       const { data } = await client.post('/tasks/nlp/extract', { text: text.trim() });
       if (!data.tasks || data.tasks.length === 0) {
-        setError('未提取到关键时间节点，试试用聊天空输入单条日程');
+        setError('未提取到关键时间节点，试试用聊天输入单条日程');
       } else {
         setExtractedTasks(data.tasks);
-        setSelectedTasks(new Set(data.tasks.map((_: any, i: number) => i)));
+        setSelectedTasks(new Set(data.tasks.map((_: unknown, i: number) => i)));
       }
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || '提取失败');
+    } catch (e) {
+      setError(errMsg(e, '提取失败'));
     } finally {
       setIsProcessing(false);
     }
@@ -63,12 +73,12 @@ export default function SmartBar() {
     setError(null);
     try {
       await confirmNLP([result.parsed]);
-      showSuccess(result.parsed.dueDate);
+      toast.success('已添加任务');
       setText('');
       setResult(null);
       await fetchTasks();
-    } catch (e: any) {
-      setError(e?.response?.data?.message || '保存失败');
+    } catch (e) {
+      setError(errMsg(e, '保存失败'));
     } finally {
       setIsSaving(false);
     }
@@ -81,48 +91,25 @@ export default function SmartBar() {
     setError(null);
     try {
       await confirmNLP(tasks);
-      const dates = tasks.map((t) => t.dueDate).filter(Boolean);
-      const today = new Date().toISOString().slice(0, 10);
-      const nonToday = dates.filter((d) => d !== today);
-      let msg = `已添加 ${tasks.length} 个任务`;
-      if (nonToday.length > 0 && nonToday[0]) {
-        const d = new Date(nonToday[0]);
-        msg += `，最近截止：${d.getMonth() + 1}月${d.getDate()}日`;
-      }
-      setSuccess(msg);
+      toast.success(`已添加 ${tasks.length} 个任务`);
       setText('');
       setExtractedTasks([]);
       setSelectedTasks(new Set());
       await fetchTasks();
-      setTimeout(() => setSuccess(null), 5000);
-    } catch (e: any) {
-      setError(e?.response?.data?.message || '保存失败');
+    } catch (e) {
+      setError(errMsg(e, '保存失败'));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const showSuccess = (dueDate?: string | null) => {
-    const today = new Date().toISOString().slice(0, 10);
-    let msg = '已添加到待安排任务';
-    if (dueDate && dueDate !== today) {
-      const dt = new Date(dueDate);
-      msg = `已添加到 ${dt.getMonth() + 1}月${dt.getDate()}日 的日程中`;
-    } else if (dueDate === today) {
-      msg = '已添加到今日任务';
-    }
-    setSuccess(msg);
-    setTimeout(() => setSuccess(null), 4000);
-  };
-
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       if (mode === 'extract') {
-        e.preventDefault();
         if (extractedTasks.length > 0) handleConfirmBatch();
         else handleExtract();
       } else {
-        e.preventDefault();
         if (result?.type === 'schedule') handleConfirmSingle();
         else handleChatSubmit();
       }
@@ -136,44 +123,40 @@ export default function SmartBar() {
   };
 
   return (
-    <div className="mb-6 overflow-hidden">
-      {/* Mode toggle */}
-      <div className="flex gap-1 mb-2">
+    <div className="mb-6">
+      {/* 模式切换 */}
+      <div className="mb-2 inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <button
-          onClick={() => { setMode('chat'); setResult(null); setExtractedTasks([]); }}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border-2 transition-all ${
-            mode === 'chat' ? 'bg-blue border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white border-black/30 text-gray-500'
+          onClick={() => { setMode('chat'); setResult(null); setExtractedTasks([]); setError(null); }}
+          className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+            mode === 'chat' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
           }`}
         >
-          <MessageCircle className="w-3 h-3" /> 聊天输入
+          <MessageCircle className="h-3.5 w-3.5" /> 聊天输入
         </button>
         <button
-          onClick={() => { setMode('extract'); setResult(null); }}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border-2 transition-all ${
-            mode === 'extract' ? 'bg-cream border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white border-black/30 text-gray-500'
+          onClick={() => { setMode('extract'); setResult(null); setError(null); }}
+          className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+            mode === 'extract' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
           }`}
         >
-          <FileText className="w-3 h-3" /> 文本提取
+          <FileText className="h-3.5 w-3.5" /> 文本提取
         </button>
       </div>
 
-      {/* Input area */}
+      {/* 输入区 */}
       {mode === 'chat' ? (
-        <div className="flex items-center gap-3 bg-white border-2 border-black rounded-2xl p-1.5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus-within:border-black transition-all">
-          <Sparkles className="ml-3 w-5 h-5 flex-shrink-0" />
+        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm transition-colors focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 dark:border-slate-800 dark:bg-slate-900">
+          <Sparkles className="ml-2 h-5 w-5 shrink-0 text-brand-500" />
           <input
             value={text}
             onChange={(e) => { setText(e.target.value); setResult(null); setError(null); }}
             onKeyDown={handleKeyDown}
             placeholder="添加日程、查询任务，或直接和我聊天..."
-            className="flex-1 bg-transparent text-black placeholder-gray-400 text-sm py-2.5 focus:outline-none font-bold"
+            className="flex-1 bg-transparent py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-slate-100"
             disabled={isSaving}
           />
-          <Button
-            size="sm"
-            onClick={result?.type === 'schedule' ? handleConfirmSingle : handleChatSubmit}
-            disabled={isProcessing || isSaving || !text.trim()}
-          >
+          <Button size="sm" onClick={result?.type === 'schedule' ? handleConfirmSingle : handleChatSubmit} disabled={isProcessing || isSaving || !text.trim()}>
             {isProcessing ? '思考中...' : isSaving ? '保存中...' : result?.type === 'schedule' ? '确认添加' : '发送'}
           </Button>
         </div>
@@ -183,97 +166,88 @@ export default function SmartBar() {
             value={text}
             onChange={(e) => { setText(e.target.value); setExtractedTasks([]); setError(null); }}
             placeholder="粘贴通知、公文等长文本，AI 自动提取所有关键时间节点..."
-            className="w-full bg-white border-2 border-black rounded-2xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none font-bold text-sm resize-none h-40 placeholder-gray-400"
+            className="h-32 w-full resize-none rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
             disabled={isSaving}
           />
           <div className="flex items-center gap-2">
-            <Button
-              onClick={extractedTasks.length > 0 ? handleConfirmBatch : handleExtract}
-              disabled={isProcessing || isSaving || !text.trim()}
-            >
+            <Button onClick={extractedTasks.length > 0 ? handleConfirmBatch : handleExtract} disabled={isProcessing || isSaving || !text.trim()}>
               {isProcessing ? '提取中...' : isSaving ? '保存中...' : extractedTasks.length > 0 ? `确认添加 (${selectedTasks.size}项)` : '提取日程'}
             </Button>
             {extractedTasks.length > 0 && (
-              <button
-                onClick={() => { setSelectedTasks(new Set(extractedTasks.map((_, i) => i))); }}
-                className="text-xs font-bold underline"
-              >全选</button>
+              <button onClick={() => setSelectedTasks(new Set(extractedTasks.map((_, i) => i)))} className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
+                全选
+              </button>
             )}
           </div>
         </div>
       )}
 
-      {/* Errors and success */}
       {error && (
-        <p className="text-red-500 text-xs mt-2 bg-red-50 border border-red-500 p-2 rounded-xl font-bold">{error}</p>
-      )}
-      {success && (
-        <p className="text-green-600 text-xs mt-2 bg-green-50 border border-green-500 p-2 rounded-xl font-bold flex items-center gap-1">
-          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />{success}
-        </p>
+        <p className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">{error}</p>
       )}
 
       <AnimatePresence>
-        {/* Chat mode: schedule result */}
+        {/* 聊天模式：日程结果 */}
         {mode === 'chat' && result?.type === 'schedule' && result.parsed && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="mt-3 bg-white border-2 border-black rounded-2xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <p className="text-xs text-gray-500 font-bold mb-2">AI 识别为日程 — 按 Enter 确认添加</p>
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            className="mt-3 rounded-xl border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-500/30 dark:bg-brand-500/5"
+          >
+            <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">AI 识别为日程 — 按 Enter 确认添加</p>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="truncate"><span className="text-gray-500">标题：</span><span className="text-black font-bold">{result.parsed.title}</span></div>
-              <div><span className="text-gray-500">类型：</span><span className="text-black font-bold">{result.parsed.category || '通用'}</span></div>
-              <div><span className="text-gray-500">日期：</span><span className="text-black font-bold">{result.parsed.dueDate || '待定'}</span></div>
-              <div><span className="text-gray-500">时间：</span><span className="text-black font-bold">{result.parsed.dueTime || '全天'}</span></div>
-              <div className="truncate"><span className="text-gray-500">地点：</span><span className="text-black font-bold">{result.parsed.location || '未指定'}</span></div>
-              <div><span className="text-gray-500">优先级：</span><span className="text-black font-bold">{result.parsed.priority === 'high' ? '高' : result.parsed.priority === 'medium' ? '中' : '低'}</span></div>
+              <div className="truncate"><span className="text-slate-500 dark:text-slate-400">标题：</span><span className="font-medium text-slate-900 dark:text-slate-100">{result.parsed.title}</span></div>
+              <div><span className="text-slate-500 dark:text-slate-400">类型：</span><span className="font-medium text-slate-900 dark:text-slate-100">{result.parsed.category || '通用'}</span></div>
+              <div><span className="text-slate-500 dark:text-slate-400">日期：</span><span className="font-medium text-slate-900 dark:text-slate-100">{result.parsed.dueDate || '待定'}</span></div>
+              <div><span className="text-slate-500 dark:text-slate-400">时间：</span><span className="font-medium text-slate-900 dark:text-slate-100">{result.parsed.dueTime || '全天'}</span></div>
+              <div className="truncate"><span className="text-slate-500 dark:text-slate-400">地点：</span><span className="font-medium text-slate-900 dark:text-slate-100">{result.parsed.location || '未指定'}</span></div>
+              <div><span className="text-slate-500 dark:text-slate-400">优先级：</span><PriorityBadge priority={result.parsed.priority} /></div>
             </div>
           </motion.div>
         )}
 
-        {/* Chat mode: query/chat result */}
+        {/* 聊天模式：查询/回复 */}
         {mode === 'chat' && (result?.type === 'query' || result?.type === 'chat') && result.answer && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="mt-3 bg-white border-2 border-black rounded-2xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <p className="text-xs text-gray-500 font-bold mb-2">{result.type === 'query' ? '查询结果' : 'AI 回复'}</p>
-            <p className="text-sm text-black font-bold whitespace-pre-wrap break-words overflow-hidden">{result.answer}</p>
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            className="mt-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          >
+            <p className="mb-2 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+              <CheckCircle className="h-3.5 w-3.5" /> {result.type === 'query' ? '查询结果' : 'AI 回复'}
+            </p>
+            <p className="whitespace-pre-wrap break-words text-sm text-slate-700 dark:text-slate-200">{result.answer}</p>
           </motion.div>
         )}
 
-        {/* Extract mode: task list */}
+        {/* 提取模式：任务列表 */}
         {mode === 'extract' && extractedTasks.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="mt-3 bg-white border-2 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] divide-y-2 divide-black/20">
-            <div className="p-4">
-              <p className="text-xs text-gray-500 font-bold">提取到 {extractedTasks.length} 个关键节点 — 点击取消不需要的，然后确认添加</p>
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className="mt-3 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900"
+          >
+            <div className="p-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400">提取到 {extractedTasks.length} 个关键节点 — 点击取消不需要的，然后确认添加</p>
             </div>
             {extractedTasks.map((task, i) => (
               <div
                 key={i}
                 onClick={() => toggleTask(i)}
-                className={`p-3 flex items-start gap-3 cursor-pointer transition-colors ${
-                  selectedTasks.has(i) ? 'bg-blue/30' : 'bg-gray-50 opacity-50'
+                className={`flex cursor-pointer items-start gap-3 p-3 transition-colors ${
+                  selectedTasks.has(i) ? 'bg-brand-50/40 dark:bg-brand-500/5' : 'opacity-50'
                 }`}
               >
-                <input type="checkbox" checked={selectedTasks.has(i)} onChange={() => toggleTask(i)}
-                  className="mt-0.5 w-4 h-4 rounded border-2 border-black accent-black" />
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <p className="text-sm font-bold text-black break-words">{task.title}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <input type="checkbox" checked={selectedTasks.has(i)} onChange={() => toggleTask(i)} className="mt-0.5 h-4 w-4 rounded accent-brand-600" />
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-sm font-medium text-slate-900 dark:text-slate-100">{task.title}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                     {task.dueDate && (
-                      <span className="text-xs font-bold bg-white border border-black rounded-full px-2 py-0.5">
-                        {new Date(task.dueDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
-                      </span>
+                      <Badge tone="blue">{new Date(task.dueDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}</Badge>
                     )}
-                    {task.dueTime && <span className="text-xs opacity-50 font-bold">{task.dueTime}</span>}
-                    {task.category && (
-                      <span className="text-xs bg-lavender border border-black rounded-full px-2 py-0.5 font-bold">{task.category}</span>
-                    )}
-                    {task.priority === 'high' && <span className="text-xs text-red-500 font-bold">高优</span>}
+                    {task.dueTime && <span className="text-xs text-slate-500 dark:text-slate-400">{task.dueTime}</span>}
+                    {task.category && <Badge tone="gray">{task.category}</Badge>}
+                    {task.priority === 'high' && <Badge tone="red">高优</Badge>}
                   </div>
                 </div>
-                {!selectedTasks.has(i) && (
-                  <X className="w-4 h-4 flex-shrink-0 mt-0.5 opacity-30" />
-                )}
+                {!selectedTasks.has(i) && <X className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />}
               </div>
             ))}
           </motion.div>

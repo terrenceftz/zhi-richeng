@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth.middleware';
 import * as settingsService from '../services/settings.service';
 import { clearLLMCache } from '../services/llm.service';
 import { v4 as uuid } from 'uuid';
+import prisma from '../db';
 
 const router = Router();
 router.use(authMiddleware);
@@ -35,7 +36,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const { isFeishuConnected } = await import('../services/feishu.service');
 
     res.json({
-      deepseekApiKey: settings.deepseek_api_key || '',
+      // 不再返回明文密钥，仅返回是否已配置
       hasDeepSeekKey: !!(settings.deepseek_api_key || process.env.DEEPSEEK_API_KEY),
       envConfigured: !!(process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== 'sk-your-deepseek-api-key'),
       imToken,
@@ -45,12 +46,13 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       feishuAppSecret: dbAppSecret ? '••••••••' : (feishuAppSecret() ? '••••••••' : ''),
       feishuConfigured: hasFeishuApp,
       feishuConnected: isFeishuConnected(),
-      regEnabled: settings.registration_enabled || 'true',
+      regEnabled: settings.registration_enabled || 'false',
       reminderMinutes: parseInt(settings.reminder_minutes || '15'),
       reminderEnabled: settings.reminder_enabled !== 'false',
       semesterName: settings.semester_name || '',
       semesterStart: settings.semester_start || '',
       semesterEnd: settings.semester_end || '',
+      mentalReportCollege: settings.mental_report_college || '',
     });
   } catch (err) {
     next(err);
@@ -59,13 +61,28 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, regEnabled, semesterName, semesterStart, semesterEnd } = req.body;
+    const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, regEnabled, semesterName, semesterStart, semesterEnd, mentalReportCollege } = req.body;
+
+    // 系统级字段（影响全局）必须管理员：飞书凭证、注册开关、学期、DeepSeek Key、报送学院
+    const systemFields = ['feishuAppId', 'feishuAppSecret', 'regEnabled', 'semesterName', 'semesterStart', 'semesterEnd', 'deepseekApiKey', 'mentalReportCollege'];
+    const wantsSystem = systemFields.some((f) => req.body[f] !== undefined);
+    if (wantsSystem) {
+      const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true } });
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: '修改系统配置（飞书凭证/注册开关/学期/API Key）需要管理员权限' });
+      }
+    }
+
     if (deepseekApiKey !== undefined) {
       await settingsService.setSetting('deepseek_api_key', deepseekApiKey);
       clearLLMCache();
     }
     if (feishuOpenId !== undefined) {
       await settingsService.setSetting(`feishu_openid_${req.userId}`, feishuOpenId);
+      // 维护 openId -> userId 反向索引（飞书消息路由用）
+      if (feishuOpenId) {
+        await settingsService.setSetting(`feishu_userid_${feishuOpenId}`, req.userId!);
+      }
     }
     if (feishuAppId !== undefined) {
       await settingsService.setSetting('feishu_app_id', feishuAppId);
@@ -91,12 +108,15 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
     if (semesterEnd !== undefined) {
       await settingsService.setSetting('semester_end', semesterEnd);
     }
+    if (mentalReportCollege !== undefined) {
+      await settingsService.setSetting('mental_report_college', String(mentalReportCollege));
+    }
     const settings = await settingsService.getAllSettings();
     const imTokenKey = `im_user_${req.userId}`;
     res.json({
-      deepseekApiKey: settings.deepseek_api_key || '',
       hasDeepSeekKey: !!(settings.deepseek_api_key || process.env.DEEPSEEK_API_KEY),
       imToken: settings[imTokenKey] || '',
+      mentalReportCollege: settings.mental_report_college || '',
       message: '设置已保存',
     });
   } catch (err) {

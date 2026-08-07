@@ -28,7 +28,11 @@ client.interceptors.response.use(
         } catch {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
-          window.location.href = '/login';
+          localStorage.removeItem('user');
+          // 只在非登录页才跳转，避免登录页反复刷新
+          if (!window.location.pathname.startsWith('/login')) {
+            window.location.href = '/login';
+          }
         }
       }
     }

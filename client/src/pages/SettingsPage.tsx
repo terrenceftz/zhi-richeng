@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Settings } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { useToastStore } from '../stores/toastStore';
 import client from '../api/client';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
 import DeepSeekCard from '../components/settings/DeepSeekCard';
 import IMWebhookCard from '../components/settings/IMWebhookCard';
 import FeishuCard from '../components/settings/FeishuCard';
@@ -13,7 +17,6 @@ import AboutCard from '../components/settings/AboutCard';
 import UsersCard from '../components/settings/UsersCard';
 
 interface SettingsData {
-  deepseekApiKey: string;
   hasDeepSeekKey: boolean;
   envConfigured: boolean;
   imToken: string;
@@ -28,29 +31,27 @@ interface SettingsData {
   semesterName: string;
   semesterStart: string;
   semesterEnd: string;
+  mentalReportCollege: string;
 }
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
+  const toast = useToastStore();
   const [data, setData] = useState<SettingsData>({
-    deepseekApiKey: '', hasDeepSeekKey: false, envConfigured: false,
+    hasDeepSeekKey: false, envConfigured: false,
     imToken: '', webhookUrl: '',
     feishuOpenId: '', feishuAppId: '', feishuAppSecret: '',
     feishuConfigured: false, feishuConnected: false,
     reminderMinutes: 15, reminderEnabled: true,
     semesterName: '', semesterStart: '', semesterEnd: '',
+    mentalReportCollege: '',
   });
   const [profileName, setProfileName] = useState('');
-  const [message, setMessage] = useState('');
-  const [msgStatus, setMsgStatus] = useState<'success' | 'error'>('success');
-
-  useEffect(() => { loadSettings(); }, []);
 
   const loadSettings = async () => {
     try {
       const { data: d } = await client.get('/settings');
       setData({
-        deepseekApiKey: d.deepseekApiKey || '',
         hasDeepSeekKey: d.hasDeepSeekKey, envConfigured: d.envConfigured,
         imToken: d.imToken || '', webhookUrl: d.webhookUrl || '',
         feishuOpenId: d.feishuOpenId || '', feishuAppId: d.feishuAppId || '',
@@ -59,38 +60,39 @@ export default function SettingsPage() {
         reminderMinutes: d.reminderMinutes || 15, reminderEnabled: d.reminderEnabled !== false,
         semesterName: d.semesterName || '', semesterStart: d.semesterStart || '',
         semesterEnd: d.semesterEnd || '',
+        mentalReportCollege: d.mentalReportCollege || '',
       });
       setProfileName(user?.name || '');
-    } catch {}
+    } catch {
+      toast.error('加载设置失败');
+    }
   };
 
-  const showMsg = (text: string, s: 'success' | 'error') => {
-    setMessage(text); setMsgStatus(s);
-    setTimeout(() => setMessage(''), 3000);
-  };
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadSettings();
+  }, []);
 
-  const put = async (body: Record<string, any>) => {
+  const put = async (body: Record<string, unknown>) => {
     await client.put('/settings', body);
-    showMsg('已保存', 'success');
+    toast.success('已保存');
   };
 
-  const set = (k: keyof SettingsData, v: any) => setData((d) => ({ ...d, [k]: v }));
+  const set = (k: keyof SettingsData, v: unknown) => setData((d) => ({ ...d, [k]: v }));
 
   return (
     <div>
-      <h2 className="text-2xl font-black mb-6 flex items-center gap-2">
-        <Settings className="w-6 h-6" />
+      <h2 className="mb-6 flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+        <Settings className="h-6 w-6 text-brand-500" />
         设置
       </h2>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-[1100px]">
-        {/* LEFT COLUMN */}
+      <div className="grid max-w-[1100px] grid-cols-1 gap-6 xl:grid-cols-2">
         <div className="space-y-6">
           <DeepSeekCard
-            apiKey={data.deepseekApiKey}
             hasKey={data.hasDeepSeekKey}
             envConfigured={data.envConfigured}
-            onSave={async (key) => { await put({ deepseekApiKey: key }); set('hasDeepSeekKey', true); }}
+            onSave={async (key) => { await put({ deepseekApiKey: key }); set('hasDeepSeekKey', !!key); }}
           />
           <IMWebhookCard webhookUrl={data.webhookUrl} imToken={data.imToken} />
           <FeishuCard
@@ -105,12 +107,27 @@ export default function SettingsPage() {
           />
         </div>
 
-        {/* RIGHT COLUMN */}
         <div className="space-y-6">
           <SemesterCard
             name={data.semesterName} start={data.semesterStart} end={data.semesterEnd}
             onSave={async (name, start, end) => { await put({ semesterName: name, semesterStart: start, semesterEnd: end }); }}
           />
+          <Card>
+            <h3 className="mb-1 text-base font-semibold text-slate-900 dark:text-slate-100">报送学院</h3>
+            <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">心理台账月度报送表（每月 15 号）中的「学院」列</p>
+            <div className="space-y-3">
+              <Input
+                label="学院名称"
+                value={data.mentalReportCollege}
+                onChange={(e) => set('mentalReportCollege', e.target.value)}
+                placeholder="如：华侨大学法学院"
+                hint="导出报送表时自动填入「学院」列"
+              />
+              <Button size="sm" onClick={async () => { await put({ mentalReportCollege: data.mentalReportCollege }); }}>
+                保存
+              </Button>
+            </div>
+          </Card>
           <ReminderCard
             enabled={data.reminderEnabled} minutes={data.reminderMinutes}
             onToggle={async (enabled) => { set('reminderEnabled', enabled); await put({ reminderEnabled: enabled }); }}
@@ -119,25 +136,17 @@ export default function SettingsPage() {
           <AccountCard
             email={user?.email || ''} name={profileName}
             onSave={async (name, password) => {
-              const body: any = {};
+              const body: Record<string, string> = {};
               if (name) body.name = name;
               if (password) body.password = password;
               await client.put('/users/me', body);
-              showMsg('个人信息已更新', 'success');
+              toast.success('个人信息已更新');
             }}
           />
         </div>
       </div>
 
-      {/* Full-width cards */}
-      <div className="max-w-[1100px] mt-6 space-y-6">
-        {message && (
-          <div className={`p-3 rounded-xl border-2 border-black text-sm font-bold ${
-            msgStatus === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
-          }`}>
-            {msgStatus === 'success' ? '✅ ' : '❌ '}{message}
-          </div>
-        )}
+      <div className="mt-6 max-w-[1100px] space-y-6">
         <UsersCard />
         <BackupCard />
         <AboutCard />

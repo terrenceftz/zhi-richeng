@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Card from './Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { useToastStore } from '../../stores/toastStore';
 
 interface Props {
   email: string;
@@ -13,43 +14,31 @@ export default function AccountCard({ email, name: initialName, onSave }: Props)
   const [name, setName] = useState(initialName);
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [status, setStatus] = useState<'success' | 'error'>('success');
+  const toast = useToastStore();
 
   const handleSave = async () => {
     setSaving(true);
     try {
       await onSave(name, password);
-      setStatus('success');
-      setMessage('个人信息已更新');
+      toast.success('个人信息已更新');
       setPassword('');
     } catch {
-      setStatus('error');
-      setMessage('更新失败');
+      toast.error('更新失败');
     } finally {
       setSaving(false);
-      setTimeout(() => setMessage(''), 3000);
     }
   };
 
   return (
-    <Card>
-      <h3 className="text-lg font-black mb-4">账号信息</h3>
+    <Card title="账号信息">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-bold opacity-50 mb-1">邮箱</label>
-          <p className="text-sm font-bold py-1">{email}</p>
+          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">邮箱</label>
+          <p className="py-1 text-sm text-slate-700 dark:text-slate-300">{email}</p>
         </div>
-        <Input label="昵称" value={name} onChange={(e) => setName(e.target.value)} placeholder="你的名字" />
-        <Input label="新密码" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="留空不修改" />
-        <div className="flex items-center gap-3">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? '保存中...' : '更新信息'}
-          </Button>
-          {message && (
-            <span className={`text-sm font-bold ${status === 'success' ? 'text-green-600' : 'text-red-500'}`}>{message}</span>
-          )}
-        </div>
+        <Input label="昵称" id="accountName" value={name} onChange={(e) => setName(e.target.value)} placeholder="你的名字" />
+        <Input label="新密码" id="accountPassword" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="留空不修改" />
+        <Button onClick={handleSave} disabled={saving}>{saving ? '保存中...' : '更新信息'}</Button>
       </div>
     </Card>
   );

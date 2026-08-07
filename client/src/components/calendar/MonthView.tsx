@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Task } from '../../types';
+import { isOverdue } from '../../types';
 import { getHoliday } from '../../utils/holidays';
 
 interface MonthViewProps {
@@ -38,14 +39,14 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
 
   return (
     <div>
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="mb-2 grid grid-cols-7 gap-1">
         {['日', '一', '二', '三', '四', '五', '六'].map((d) => (
-          <div key={d} className="text-center text-xs font-black py-2 opacity-50">{d}</div>
+          <div key={d} className="py-2 text-center text-xs font-medium text-slate-400 dark:text-slate-500">{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
         {days.map((d, i) => {
-          if (d === null) return <div key={i} className="aspect-square bg-gray-50/50 rounded-lg" />;
+          if (d === null) return <div key={i} className="aspect-square rounded-lg bg-slate-50/50 dark:bg-slate-900/50" />;
           const ds = fmt(d);
           const holiday = getHoliday(ds);
           const dayTasks = tasksByDate[ds] || [];
@@ -58,54 +59,49 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
             <div
               key={i}
               onClick={() => onDateSelect(ds)}
-              className={`aspect-square rounded-lg p-1 cursor-pointer border-2 transition-all overflow-hidden ${
+              className={`aspect-square cursor-pointer overflow-hidden rounded-lg border p-1 transition-colors ${
                 isSelected
-                  ? 'bg-blue border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                  ? 'border-brand-500 bg-brand-50 dark:bg-brand-500/10'
                   : isToday
-                  ? 'ring-2 ring-black bg-white border-black'
-                  : isRestDay
-                  ? 'bg-red-50/50 border-red-200'
-                  : 'bg-white border-gray-300 hover:border-black'
+                    ? 'border-brand-300 bg-white dark:border-brand-500/40 dark:bg-slate-900'
+                    : isRestDay
+                      ? 'border-red-200 bg-red-50/40 dark:border-red-500/20 dark:bg-red-500/5'
+                      : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700'
               }`}
             >
-              {/* 日期数字 */}
-              <div className="flex items-center gap-0.5 mb-0.5 px-0.5">
+              <div className="mb-0.5 flex items-center gap-0.5 px-0.5">
                 <span
-                  className={`text-xs font-bold ${
+                  className={`text-xs font-medium ${
                     isToday
-                      ? 'text-white bg-coral rounded-full w-5 h-5 flex items-center justify-center'
+                      ? 'flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white'
                       : isStatutory
-                      ? 'text-red-500'
-                      : isRestDay
-                      ? 'text-red-400'
-                      : isSelected
-                      ? ''
-                      : 'opacity-50'
+                        ? 'text-red-500'
+                        : isRestDay
+                          ? 'text-red-400'
+                          : 'text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   {d}
                 </span>
-                {/* 节假日名称 */}
                 {isStatutory && holiday && (
-                  <span className="text-[9px] font-bold text-red-400 truncate leading-none">
-                    {holiday.name}
-                  </span>
+                  <span className="truncate text-[9px] font-medium leading-none text-red-400">{holiday.name}</span>
                 )}
               </div>
 
-              {/* 任务列表 */}
               <div className="space-y-0.5">
                 {dayTasks.slice(0, 2).map((task) => (
                   <div
                     key={task.id}
                     onClick={(e) => { e.stopPropagation(); onTaskClick(task); }}
-                    className="text-[10px] px-1 py-0.5 rounded-md truncate font-bold bg-black text-white cursor-pointer"
+                    className={`truncate rounded px-1 py-0.5 text-[10px] font-medium text-white ${
+                      isOverdue(task) ? 'bg-red-500' : 'bg-brand-600'
+                    }`}
                   >
-                    {task.title}
+                    {isOverdue(task) ? '🔴 ' : ''}{task.title}
                   </div>
                 ))}
                 {dayTasks.length > 2 && (
-                  <div className="text-[10px] font-bold opacity-50 px-1">+{dayTasks.length - 2}</div>
+                  <div className="px-1 text-[10px] text-slate-400">+{dayTasks.length - 2}</div>
                 )}
               </div>
             </div>

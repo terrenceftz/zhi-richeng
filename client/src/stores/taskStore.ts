@@ -33,8 +33,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const tasks = await tasksApi.fetchTasks(filters);
       set({ tasks, isLoading: false });
-    } catch (err: any) {
-      set({ isLoading: false, error: err.response?.data?.message || '获取任务失败' });
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '获取任务失败';
+      set({ isLoading: false, error: msg });
     }
   },
 
@@ -77,8 +78,8 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const result = await tasksApi.confirmNLP(tasks);
       set({ tasks: [...get().tasks, ...result.tasks] });
-    } catch (err: any) {
-      const msg = err.response?.data?.message || '保存任务失败';
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存任务失败';
       set({ error: msg });
       throw err;
     }

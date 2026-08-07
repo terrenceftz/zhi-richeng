@@ -8,12 +8,12 @@ let cachedApiKey: string | null = null;
 async function getLLMClient(): Promise<OpenAI> {
   const apiKey = await getDeepSeekApiKey();
   const effectiveKey = apiKey || config.deepseek.apiKey;
-  
+
   // Invalidate cache if API key changed (e.g. user updated via settings)
   if (cachedClient && cachedApiKey !== effectiveKey) {
     cachedClient = null;
   }
-  
+
   if (!cachedClient) {
     cachedApiKey = effectiveKey;
     cachedClient = new OpenAI({
@@ -211,7 +211,6 @@ export async function classifyIntent(text: string): Promise<'schedule' | 'query'
   const schedulePatterns = /(明天|后天|今天|下个?周|下个月|周一|周二|周三|周四|周五|周六|周日|提醒我|日程|添加任务|安排|开会|提交|截止|在.*点|下午|上午|晚上)/;
   const queryPatterns = /(有哪些|多少|查询|查一下|这周|本周|最近|统计|找一下|帮我查|帮我找|帮我看看|还有哪些|所有|哪些|怎么|如何|什么|几个)/;
 
-  // Chat-like requests should not be schedule
   if (chatPatterns.test(text)) return 'chat';
 
   if (schedulePatterns.test(text) && !queryPatterns.test(text)) return 'schedule';
@@ -233,7 +232,7 @@ export async function classifyIntent(text: string): Promise<'schedule' | 'query'
   });
 
   const result = (response.choices[0]?.message?.content || '').trim().toLowerCase();
-  const word = result.split(/\s/)[0]; // first word only
+  const word = result.split(/\s/)[0];
   if (word === 'schedule') return 'schedule';
   if (word === 'query') return 'query';
   if (result.includes('schedule')) return 'schedule';
@@ -275,18 +274,194 @@ export async function extractTasks(text: string): Promise<{ tasks: ParsedTask[] 
 
   const content = response.choices[0]?.message?.content || '{"tasks":[]}';
   const cleaned = content.replace(/```json|```/g, '').trim();
-  
+
   let parsed = JSON.parse(cleaned);
-  
+
   // Handle LLM returning a bare array instead of {"tasks":[...]}
   if (Array.isArray(parsed)) {
     parsed = { tasks: parsed };
   }
-  
-  // Ensure tasks is always an array
+
   if (!parsed.tasks || !Array.isArray(parsed.tasks)) {
     parsed = { tasks: [] };
   }
-  
+
   return parsed;
+}
+
+/** 判断用户输入是否为「学生查询」意图（查学生信息/台账） */
+export async function isStudentQueryIntent(text: string): Promise<boolean> {
+  // 快速正则：含学生查询关键词
+  if (/(学生|台账|心理|查一下|查询|信息|多少个学生|班级.*学生|学号|联系方式)/.test(text)) {
+    return true;
+  }
+  return false;
+}
+
+/** 从跟进记录语句中提取结构化信息：学生姓名/学号 + 跟进内容 + 日期（可选） */
+export async function extractFollowUp(text: string): Promise<{ studentName: string; content: string; date?: string } | null> {
+  const apiKey = await getDeepSeekApiKey();
+  if (!apiKey) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const client = new OpenAI({ apiKey, baseURL: config.deepseek.baseURL, timeout: 10000 });
+    const response = await client.chat.completions.create({
+      model: config.deepseek.model,
+      messages: [
+        {
+          role: 'system',
+          content: `当前日期 ${today}。从用户的「心理台账跟进记录」语句中提取：
+1. studentName：被跟进的学生姓名或学号（必填）
+2. content：跟进内容（简洁概括，去除"跟进"等引导词）
+3. date：跟进日期（若提到"昨天/前天/某月某日"则给出 YYYY-MM-DD，未提则为空）
+只返回严格 JSON：{"studentName":"","content":"","date":""}`,
+        },
+        { role: 'user', content: text },
+      ],
+      temperature: 0,
+      max_tokens: 200,
+    });
+    const raw = (response.choices[0]?.message?.content || '').replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(raw);
+    if (parsed.studentName && parsed.content) {
+      return {
+        studentName: String(parsed.studentName).trim(),
+        content: String(parsed.content).trim(),
+        date: parsed.date ? String(parsed.date).trim() : undefined,
+      };
+    }
+  } catch {
+    /* 解析失败返回 null */
+  }
+  return null;
+}
+
+/** 从学生查询语句中提取搜索关键词（姓名/班级/学号） */
+export async function extractStudentQueryKeyword(text: string): Promise<string | null> {
+  // 去掉常见前缀动词
+  const cleaned = text
+    .replace(/^(我想查|帮我查|查一下|查询|查找|看看|找一下|了解|查看)\s*/g, '')
+    .replace(/(的信息|的资料|的情况|的联系方式|的台账|详细信息|信息)\s*$/g, '')
+    .replace(/^(学生|同学)\s*/g, '')
+    .trim();
+  if (!cleaned) return null;
+  // 如果句子太长（>20字），用 LLM 提取；否则直接返回
+  if (cleaned.length <= 20) return cleaned;
+
+  const apiKey = await getDeepSeekApiKey();
+  const effectiveKey = apiKey || config.deepseek.apiKey;
+  if (!effectiveKey) return cleaned.slice(0, 20);
+
+  try {
+    const client = new OpenAI({ apiKey: effectiveKey, baseURL: config.deepseek.baseURL, timeout: 10000 });
+    const response = await client.chat.completions.create({
+      model: config.deepseek.model,
+      messages: [
+        { role: 'system', content: '从用户语句中提取要查询的学生姓名、班级或学号关键词。只返回关键词本身，不要其他文字。' },
+        { role: 'user', content: text },
+      ],
+      temperature: 0,
+      max_tokens: 30,
+    });
+    const result = (response.choices[0]?.message?.content || '').trim();
+    return result || cleaned.slice(0, 20);
+  } catch {
+    return cleaned.slice(0, 20);
+  }
+}
+export async function extractNotice(text: string): Promise<{
+  title: string;
+  source: string | null;
+  deadline: string | null;
+  materials: { name: string; required: boolean }[];
+}> {
+  const apiKey = await getDeepSeekApiKey();
+  const effectiveKey = apiKey || config.deepseek.apiKey;
+  if (!effectiveKey) {
+    throw Object.assign(new Error('未配置 DeepSeek API Key，无法使用 AI 解析'), { statusCode: 400 });
+  }
+  const client = new OpenAI({ apiKey: effectiveKey, baseURL: config.deepseek.baseURL, timeout: 20000 });
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const response = await client.chat.completions.create({
+    model: config.deepseek.model,
+    messages: [
+      {
+        role: 'system',
+        content: `你是公文解析助手。当前日期 ${today}。从用户提供的通知文本中提取结构化信息。
+返回严格 JSON，格式：
+{"title":"通知标题（含动作）","source":"发布单位（如无则 null）","deadline":"截止日期 YYYY-MM-DD（如无明确截止则 null）","materials":[{"name":"材料名称","required":true}]}
+规则：title 必填；materials 是需要上报/提交的材料清单，没有则为空数组。只返回 JSON。`,
+      },
+      { role: 'user', content: text },
+    ],
+    temperature: 0.1,
+    max_tokens: 800,
+  });
+
+  const content = response.choices[0]?.message?.content || '{}';
+  const cleaned = content.replace(/```json|```/g, '').trim();
+  const parsed = JSON.parse(cleaned);
+  if (!parsed.title) throw new Error('未能解析出通知标题');
+  return {
+    title: String(parsed.title),
+    source: parsed.source ? String(parsed.source) : null,
+    deadline: parsed.deadline || null,
+    materials: Array.isArray(parsed.materials)
+      ? parsed.materials.map((m: any) => ({ name: String(m.name || ''), required: !!m.required }))
+      : [],
+  };
+}
+
+/** 生成台账学生下一步跟进建议（AI 台账智囊） */
+export async function mentalAdvice(profile: string, records: string): Promise<string> {
+  const apiKey = await getDeepSeekApiKey();
+  const effectiveKey = apiKey || config.deepseek.apiKey;
+  if (!effectiveKey) {
+    throw Object.assign(new Error('未配置 DeepSeek API Key，无法生成建议'), { statusCode: 400 });
+  }
+  const client = new OpenAI({ apiKey: effectiveKey, baseURL: config.deepseek.baseURL, timeout: 20000 });
+  const response = await client.chat.completions.create({
+    model: config.deepseek.model,
+    messages: [
+      {
+        role: 'system',
+        content:
+          '你是高校辅导员的学生心理关怀助手。根据台账学生档案和历史跟进记录，生成下一步跟进建议（3-5 条）。' +
+          '要求：具体可操作、体现人文关怀与隐私保护、结合该生的关注级别和类别给出差异化建议；' +
+          '不要空话套话；分条列出，每条一句话到两句话。',
+      },
+      { role: 'user', content: `【学生档案】\n${profile}\n\n【历史跟进记录】\n${records}` },
+    ],
+    temperature: 0.4,
+    max_tokens: 700,
+  });
+  return response.choices[0]?.message?.content?.trim() || '暂无可生成的建议';
+}
+
+/** 生成数据看板智能解读（AI 周报/月报） */
+export async function statsInsight(summary: string): Promise<string> {
+  const apiKey = await getDeepSeekApiKey();
+  const effectiveKey = apiKey || config.deepseek.apiKey;
+  if (!effectiveKey) {
+    throw Object.assign(new Error('未配置 DeepSeek API Key，无法生成解读'), { statusCode: 400 });
+  }
+  const client = new OpenAI({ apiKey: effectiveKey, baseURL: config.deepseek.baseURL, timeout: 20000 });
+  const response = await client.chat.completions.create({
+    model: config.deepseek.model,
+    messages: [
+      {
+        role: 'system',
+        content:
+          '你是高校辅导员工作数据解读助手。根据系统统计数据，生成一份 150 字以内的中文工作解读。' +
+          '结构：1) 整体概况（一句话）2) 需要关注的风险点 3) 建议优先处理的动作。' +
+          '语言平实、面向辅导员工作实际，不要重复罗列所有数字，只提炼重点。',
+      },
+      { role: 'user', content: `统计数据：\n${summary}` },
+    ],
+    temperature: 0.4,
+    max_tokens: 500,
+  });
+  return response.choices[0]?.message?.content?.trim() || '暂无可生成的解读';
 }

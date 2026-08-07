@@ -39,8 +39,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch (err: any) {
-      set({ isLoading: false, error: err.response?.data?.message || '登录失败' });
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '登录失败';
+      set({ isLoading: false, error: msg });
       throw err;
     }
   },
@@ -59,8 +60,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch (err: any) {
-      set({ isLoading: false, error: err.response?.data?.message || '注册失败' });
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '注册失败';
+      set({ isLoading: false, error: msg });
       throw err;
     }
   },
@@ -82,7 +84,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const accessToken = localStorage.getItem('accessToken');
     const refreshToken = localStorage.getItem('refreshToken');
     const userJson = localStorage.getItem('user');
-    const user = userJson ? JSON.parse(userJson) : null;
+    let user = null;
+    if (userJson) {
+      try {
+        user = JSON.parse(userJson);
+      } catch {
+        user = null;
+      }
+    }
     if (accessToken && refreshToken) {
       set({ accessToken, refreshToken, user, isAuthenticated: true });
     }

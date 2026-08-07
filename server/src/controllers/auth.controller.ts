@@ -13,10 +13,9 @@ export async function register(req: Request, res: Response, next: NextFunction) 
       return res.status(400).json({ message: '密码长度至少6位' });
     }
 
-    // Check if registration is enabled (default: closed)
+    // 注册开关：默认关闭（与 seed 一致）；首个用户总是允许
     const enabled = await settingsService.getSetting('registration_enabled');
     const userCount = await prisma.user.count();
-    // Allow if explicitly enabled OR if no users exist yet (first user always allowed)
     if (enabled !== 'true' && userCount > 0) {
       return res.status(403).json({ message: '注册已关闭' });
     }

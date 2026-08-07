@@ -3,13 +3,27 @@ import prisma from '../db';
 import * as settingsService from './settings.service';
 import * as tasksService from './tasks.service';
 import * as llmService from './llm.service';
+import { formatTaskCard } from './taskFormat';
+import { handleStudentQuery } from './studentQuery.service';
+import { handleMentalFollowUp } from './mentalFollowUp.service';
 
 
 let wsClient: Lark.WSClient | null = null;
 let connected = false;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function isFeishuConnected(): boolean {
   return connected;
+}
+
+/** 停止飞书客户端与重连定时器（优雅关闭用） */
+export function stopFeishuClient(): void {
+  connected = false;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  wsClient = null;
 }
 
 async function getFeishuClient(): Promise<Lark.Client | null> {
@@ -119,12 +133,19 @@ export async function startFeishuClient(): Promise<void> {
 
             if (!text.trim()) return;
 
-            // Find user by Feishu open_id
-            const users = await prisma.user.findMany();
-            let targetUserId: string | null = null;
-            for (const user of users) {
-              const fsId = await settingsService.getSetting(`feishu_openid_${user.id}`);
-              if (fsId === senderId) { targetUserId = user.id; break; }
+            // 反向索引查 user（O(1)，避免全表扫用户）
+            let targetUserId: string | null = await settingsService.getSetting(`feishu_userid_${senderId}`);
+            if (!targetUserId) {
+              // 兜底：反向索引未命中（历史数据），走原全表扫，并补建反向索引
+              const users = await prisma.user.findMany();
+              for (const user of users) {
+                const fsId = await settingsService.getSetting(`feishu_openid_${user.id}`);
+                if (fsId === senderId) {
+                  targetUserId = user.id;
+                  await settingsService.setSetting(`feishu_userid_${senderId}`, user.id);
+                  break;
+                }
+              }
             }
 
             if (!targetUserId) {
@@ -140,6 +161,20 @@ export async function startFeishuClient(): Promise<void> {
                 data: { userId: targetUserId, content: cleanText.slice(0, 500), source: 'feishu' },
               });
               await sendReply(client, chatId, `💡 已记录灵感：${cleanText.slice(0, 50)}${cleanText.length > 50 ? '...' : ''}`);
+              return;
+            }
+
+            // 心理台账跟进记录：给指定学生添加跟进
+            const followUpReply = await handleMentalFollowUp(targetUserId, text);
+            if (followUpReply) {
+              await sendReply(client, chatId, followUpReply);
+              return;
+            }
+
+            // 学生查询：查学生信息 / 列出心理台账学生
+            const studentReply = await handleStudentQuery(targetUserId, text);
+            if (studentReply) {
+              await sendReply(client, chatId, studentReply);
               return;
             }
 
@@ -161,14 +196,13 @@ export async function startFeishuClient(): Promise<void> {
               tags: parsed.tags || [],
             });
 
-            const dateStr = task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : null;
-            const reply = [
-              `✅ 已添加：${task.title}`,
-              dateStr ? `📅 ${dateStr}` : '📋 待安排',
-              task.dueTime ? `⏰ ${task.dueTime}` : '',
-              task.location ? `📍 ${task.location}` : '',
-              task.priority === 'high' ? '🔥 高优先级' : '',
-            ].filter(Boolean).join('\n');
+            const reply = formatTaskCard({
+              title: task.title,
+              priority: task.priority,
+              dueDate: task.dueDate,
+              dueTime: task.dueTime || null,
+              location: task.location || null,
+            });
 
             await sendReply(client, chatId, reply);
           } catch (err) {
@@ -187,11 +221,22 @@ export async function startFeishuClient(): Promise<void> {
     wsClient.start({ eventDispatcher: dispatcher });
 
     connected = true;
-    console.log('[飞书] WebSocket 已连接，等待消息...');
+    console.log('[飞书] WebSocket 已启动，等待消息...');
   } catch (err) {
     console.error('[飞书] 连接失败:', err);
     connected = false;
+    scheduleReconnect();
   }
+}
+
+/** 失败后 30 秒自动重连，避免长连接掉线后永久失效 */
+function scheduleReconnect(): void {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = null;
+    console.log('[飞书] 尝试重新连接...');
+    await startFeishuClient();
+  }, 30_000);
 }
 
 export async function sendReminder(openId: string, text: string): Promise<void> {

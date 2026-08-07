@@ -18,6 +18,11 @@ export async function fetchTask(id: string): Promise<Task> {
   return data.task;
 }
 
+export async function fetchOverdueTasks(): Promise<Task[]> {
+  const { data } = await client.get('/tasks/overdue');
+  return data.tasks;
+}
+
 export async function createTask(input: Partial<Task>): Promise<Task> {
   const { data } = await client.post('/tasks', input);
   return data.task;

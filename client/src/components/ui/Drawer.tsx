@@ -1,5 +1,5 @@
+import { useEffect, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 interface DrawerProps {
@@ -7,44 +7,60 @@ interface DrawerProps {
   onClose: () => void;
   children: ReactNode;
   title?: string;
+  width?: string;
 }
 
-export default function Drawer({
-  open,
-  onClose,
-  children,
-  title,
-}: DrawerProps) {
+export default function Drawer({ open, onClose, children, title, width = 'max-w-md' }: DrawerProps) {
+  const drawerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    const prevActive = document.activeElement as HTMLElement | null;
+    drawerRef.current?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      prevActive?.focus?.();
+    };
+  }, [open, onClose]);
+
   return (
     <AnimatePresence>
       {open && (
         <>
           <motion.div
-            className="fixed inset-0 bg-black/40 z-40"
+            className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
           />
           <motion.div
-            className="fixed right-0 top-0 h-full w-full max-w-md bg-white border-l-2 border-black z-50 overflow-y-auto shadow-[-4px_0px_0px_0px_rgba(0,0,0,1)]"
+            ref={drawerRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title || '抽屉'}
+            className={`fixed right-0 top-0 z-50 flex h-full w-full ${width} flex-col border-l border-slate-200 bg-white shadow-2xl outline-none dark:border-slate-800 dark:bg-slate-900`}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
           >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-black">{title || ''}</h2>
-                <button
-                  onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-black hover:bg-black/5 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              {children}
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+              <button
+                onClick={onClose}
+                aria-label="关闭"
+                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
           </motion.div>
         </>
       )}

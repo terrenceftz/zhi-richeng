@@ -12,11 +12,17 @@ model User {
   email         String         @unique
   password      String
   name          String
+  role          String         @default("user") // "user" | "admin"
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   tasks         Task[]
   ideas         Idea[]
   refreshTokens RefreshToken[]
+  students      Student[]
+  notices       Notice[]
+  counselings   Counseling[]
+  mentalRecords MentalRecord[]
+  mentalProfiles MentalProfile[]
 }
 
 model Task {
@@ -39,6 +45,12 @@ model Task {
   sortOrder   Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, sortOrder])
+  @@index([dueDate])
+  @@index([parentId])
+  @@index([status])
 }
 
 model RefreshToken {
@@ -48,6 +60,9 @@ model RefreshToken {
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Setting {
@@ -64,5 +79,130 @@ model Idea {
   content   String
   source    String   @default("web") // web | feishu
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
+/// 学生花名册
+model Student {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  studentNo   String?
+  className   String?
+  gender      String?
+  birthDate   DateTime?
+  studentType String?      // domestic 境内生 / overseas 境外生
+  idNumber    String?      // 证件号码（境内生为身份证）
+  grade       String?      // 年级，如 2024级
+  hometown    String?      // 籍贯
+  phone       String?
+  dormitory   String?
+  address     String?      // 家庭住址
+  tags        String       @default("[]") // JSON 数组：学业预警/贫困/心理 等
+  remark      String?
+  isMentalTarget Boolean   @default(false) // 是否心理台账重点关注学生
+  counselings Counseling[]
+  mentalRecords MentalRecord[]
+  mentalProfile MentalProfile?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([userId, className])
+  @@index([userId, grade])
+  @@index([userId, studentType])
+  @@index([userId, isMentalTarget])
+}
+
+/// 心理台账记录
+model MentalRecord {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date       DateTime
+  level      String   @default("normal") // normal 一般关注 / key 重点关注 / crisis 危机
+  status     String   @default("active") // active 关注中 / closed 已结案
+  situation  String   // 跟进情况
+  action     String?  // 跟进措施
+  followUp   String?  // 下一步跟进计划（文本）
+  followUpDate DateTime? // 下次跟进日期（到期飞书提醒用）
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([studentId])
+  @@index([userId, status])
+  @@index([followUpDate])
+}
+
+/// 心理台账档案（与 Student 一对一，仅在标记为台账学生时创建）
+model MentalProfile {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId      String   @unique
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  isPoverty      Boolean  @default(false)  // 是否家庭经济困难生
+  concernLevel   Int      @default(1)      // 关注级别 1/2/3，3 最高
+  categories     String   @default("[]")   // JSON 数组：心理健康/学业预警/延期毕业/重大疾病/政治安全/其他关注
+  includedAt     DateTime?                  // 纳入台账时间
+  includeReason  String?                    // 纳入原因
+  followUpPerson String?                    // 跟进人
+  parentInformed Boolean  @default(false)  // 家长是否知情
+  parentPhone    String?                    // 家长联系电话
+  remark         String?                    // 备注
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}
+
+/// 谈心谈话记录
+model Counseling {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date      DateTime
+  type      String   @default("日常") // 日常/学业/心理/违纪/就业
+  content   String
+  followUp  String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([studentId])
+}
+
+/// 通知 / 材料上报
+model Notice {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  source    String?
+  deadline  DateTime?
+  materials String   @default("[]") // JSON: { name, required, submitted, note }[]
+  status    String   @default("pending") // pending | in_progress | done
+  taskId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+/// 提醒发送去重记录（持久化，避免重启重复/漏发）
+model ReminderLog {
+  id     String   @id @default(uuid())
+  taskId String
+  key    String   // 去重键：例如 "reminder_15" 或 "digest_2026-01-01"
+  sentAt DateTime @default(now())
+
+  @@unique([taskId, key])
+  @@index([taskId])
+}

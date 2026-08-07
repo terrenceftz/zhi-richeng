@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import * as tasksService from '../services/tasks.service';
 import * as llmService from '../services/llm.service';
+import { formatTaskList } from '../services/taskFormat';
+import { sanitizeTaskInput } from '../middleware/validate';
 
 async function scheduleFeishuReminder(userId: string, task: any) {
   if (!task.dueDate || !task.dueTime) return;
@@ -35,9 +37,18 @@ export async function getTask(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+export async function getOverdue(req: Request, res: Response, next: NextFunction) {
+  try {
+    const tasks = await tasksService.getOverdueTasks(req.userId!);
+    res.json({ tasks });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function createTask(req: Request, res: Response, next: NextFunction) {
   try {
-    const task = await tasksService.createTask(req.userId!, req.body);
+    const task = await tasksService.createTask(req.userId!, sanitizeTaskInput(req.body) as tasksService.CreateTaskInput);
     scheduleFeishuReminder(req.userId!, task);
     res.status(201).json({ task });
   } catch (err) {
@@ -47,7 +58,7 @@ export async function createTask(req: Request, res: Response, next: NextFunction
 
 export async function updateTask(req: Request, res: Response, next: NextFunction) {
   try {
-    const task = await tasksService.updateTask(req.userId!, req.params.id, req.body);
+    const task = await tasksService.updateTask(req.userId!, req.params.id, sanitizeTaskInput(req.body) as tasksService.UpdateTaskInput);
     res.json({ task });
   } catch (err) {
     next(err);
@@ -156,12 +167,7 @@ export async function smart(req: Request, res: Response, next: NextFunction) {
       res.json({ type: 'schedule', parsed, confirmed: false });
     } else if (intent === 'query') {
       const tasks = await tasksService.getTasks(req.userId!, {});
-      const statusCN: Record<string, string> = { todo: '待办', in_progress: '进行中', done: '完成' };
-      const taskList = tasks.slice(0, 30).map((t) =>
-        `${t.priority === 'high' ? '🔴' : t.priority === 'medium' ? '🟡' : '🟢'} ${t.title}` +
-        `${t.dueDate ? ' → ' + new Date(t.dueDate).toISOString().slice(0, 10) : ''}` +
-        `${t.dueTime ? ' ' + t.dueTime : ''} [${statusCN[t.status] || t.status}]`
-      ).join('\n');
+      const taskList = formatTaskList(tasks.slice(0, 30));
       const answer = await llmService.queryTasks(text, taskList);
       res.json({ type: 'query', answer });
     } else {
@@ -179,13 +185,7 @@ export async function queryNL(req: Request, res: Response, next: NextFunction) {
     if (!question) return res.status(400).json({ message: '缺少 question 字段' });
 
     const tasks = await tasksService.getTasks(req.userId!, {});
-    const statusCN: Record<string, string> = { todo: '待办', in_progress: '进行中', done: '完成' };
-    const taskList = tasks.slice(0, 30).map((t) =>
-      `${t.priority === 'high' ? '🔴' : t.priority === 'medium' ? '🟡' : '🟢'} ${t.title}` +
-      `${t.dueDate ? ` → ${new Date(t.dueDate).toISOString().slice(0, 10)}` : ''}` +
-      `${t.dueTime ? ` ${t.dueTime}` : ''} [${statusCN[t.status] || t.status}]` +
-      `${t.category ? ` #${t.category}` : ''}`
-    ).join('\n');
+    const taskList = formatTaskList(tasks.slice(0, 30));
 
     const answer = await llmService.queryTasks(question, taskList);
     res.json({ answer });

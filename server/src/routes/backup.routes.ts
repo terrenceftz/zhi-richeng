@@ -1,7 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { authMiddleware } from '../middleware/auth.middleware';
+import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import multer from 'multer';
-import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import prisma from '../db';
@@ -9,120 +8,95 @@ import prisma from '../db';
 const router = Router();
 router.use(authMiddleware);
 
-const DB_PATH = path.resolve(process.env.DATABASE_URL?.replace('file:', '') || path.join(__dirname, '../../prisma/dev.db'));
+// Prisma 约定：DATABASE_URL="file:./dev.db" 是相对于 prisma schema 所在目录（<server>/prisma）的路径。
+// 不依赖 __dirname（tsx 内存编译与 tsc 输出目录不一致），统一用 cwd 作为 server 根。
+const rawUrl = (process.env.DATABASE_URL || 'file:./dev.db').replace(/^file:/, '').trim();
+const PRISMA_DIR = path.resolve(process.cwd(), 'prisma');
+const DB_PATH = path.isAbsolute(rawUrl) ? rawUrl : path.resolve(PRISMA_DIR, rawUrl);
 
-// Multer for file upload (accept .sql files, max 10MB)
+// SQLite 文件头魔数："SQLite format 3\0"（16 字节）
+const SQLITE_MAGIC = Buffer.from('SQLite format 3\0');
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
   fileFilter: (_req, file, cb) => {
-    // Accept .sql, .txt, or any file (we validate content)
+    // 仅允许 .db / .sqlite / .sqlite3
+    const ok = /\.(db|sqlite|sqlite3)$/i.test(file.originalname);
+    if (!ok) return cb(new Error('仅支持 .db / .sqlite / .sqlite3 文件'));
     cb(null, true);
   },
 });
 
-// GET /api/backup — download a SQL dump of the database
-router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+// GET /api/backup — 下载整个 sqlite 数据库文件（二进制）。仅管理员。
+router.get('/', requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    // Ensure db file exists
     if (!fs.existsSync(DB_PATH)) {
       return res.status(404).json({ message: '数据库文件不存在' });
     }
-
-    const sql = execSync(`sqlite3 "${DB_PATH}" .dump`, {
-      encoding: 'utf-8',
-      maxBuffer: 50 * 1024 * 1024, // 50MB
-    });
-
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const filename = `zhi-richeng-backup-${timestamp}.sql`;
-
-    res.setHeader('Content-Type', 'application/sql');
+    const filename = `zhi-richeng-backup-${timestamp}.db`;
+    res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(sql);
+    fs.createReadStream(DB_PATH).pipe(res);
   } catch (err) {
     next(err);
   }
 });
 
-// POST /api/backup/restore — upload and restore from a SQL dump
-router.post('/restore', upload.single('file'), async (req: Request, res: Response, next: NextFunction) => {
+// POST /api/backup/restore — 上传 .db 文件覆盖恢复。仅管理员。
+// 不再执行任意 SQL：仅校验 SQLite 魔数后做文件替换。
+router.post('/restore', requireAdmin, upload.single('file'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const file = req.file;
     if (!file) {
-      return res.status(400).json({ message: '请上传备份文件' });
+      return res.status(400).json({ message: '请上传备份文件（.db）' });
     }
 
-    const sql = file.buffer.toString('utf-8').trim();
-    if (!sql) {
-      return res.status(400).json({ message: '备份文件为空' });
+    // 校验 SQLite 魔数头，拒绝非数据库文件
+    if (file.buffer.length < 16 || file.buffer.subarray(0, 16).toString() !== SQLITE_MAGIC.toString()) {
+      return res.status(400).json({ message: '无效的 SQLite 数据库文件（魔数校验失败）' });
     }
 
-    // Validate: must contain SQL statements
-    if (!sql.match(/^(CREATE TABLE|INSERT INTO|PRAGMA|BEGIN)/mi)) {
-      return res.status(400).json({ message: '无效的备份文件格式，请上传正确的 SQL 备份文件' });
-    }
-
-    // Check file size reasonableness
-    if (sql.length < 50) {
-      return res.status(400).json({ message: '备份文件内容过短，可能已损坏' });
-    }
-
-    // Backup current database before restore (safety net)
     const backupDir = path.resolve(__dirname, '../../backups');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
+    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+
+    // 恢复前的安全备份
     const safetyBackup = path.join(backupDir, `pre-restore-${Date.now()}.db`);
-    if (fs.existsSync(DB_PATH)) {
-      fs.copyFileSync(DB_PATH, safetyBackup);
-    }
+    if (fs.existsSync(DB_PATH)) fs.copyFileSync(DB_PATH, safetyBackup);
 
     try {
-      // Disconnect Prisma, restore, reconnect
       await prisma.$disconnect();
 
-      // Write SQL to temp file and import
-      const tempSql = path.join(backupDir, 'restore-temp.sql');
-      fs.writeFileSync(tempSql, sql, 'utf-8');
+      // 直接用上传的 buffer 覆盖数据库文件，完全不执行 SQL
+      fs.writeFileSync(DB_PATH, file.buffer);
 
-      // Delete existing database
-      if (fs.existsSync(DB_PATH)) {
-        fs.unlinkSync(DB_PATH);
-      }
-
-      // Run the SQL import
-      execSync(`sqlite3 "${DB_PATH}" < "${tempSql}"`, { maxBuffer: 50 * 1024 * 1024 });
-
-      // Clean up temp file
-      fs.unlinkSync(tempSql);
-
-      // Reconnect Prisma
       await prisma.$connect();
 
-      // Clean up safety backup (keep last 3)
+      // 仅保留最近 3 个 pre-restore 备份
       const oldBackups = fs.readdirSync(backupDir)
         .filter((f: string) => f.startsWith('pre-restore-'))
         .sort()
         .reverse();
       for (const f of oldBackups.slice(3)) {
-        fs.unlinkSync(path.join(backupDir, f));
+        try { fs.unlinkSync(path.join(backupDir, f)); } catch {}
       }
 
-      res.json({ message: '数据恢复成功，服务器将使用新数据' });
+      res.json({ message: '数据恢复成功，服务器已使用新数据' });
     } catch (restoreErr) {
-      // Restore failed — try to recover from safety backup
+      // 回滚到安全备份
       try {
         if (fs.existsSync(DB_PATH)) fs.unlinkSync(DB_PATH);
         fs.copyFileSync(safetyBackup, DB_PATH);
       } catch {}
-
-      // Reconnect
       try { await prisma.$connect(); } catch {}
-
+      console.error('[备份] 恢复失败，已回滚:', restoreErr);
       throw Object.assign(new Error('数据恢复失败，已自动回滚到恢复前的状态'), { statusCode: 500 });
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.name === 'MulterError' || err?.message) {
+      return res.status(400).json({ message: err.message || '上传失败' });
+    }
     next(err);
   }
 });

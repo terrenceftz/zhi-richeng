@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import rateLimit from 'express-rate-limit';
 import prisma from '../db';
 import * as tasksService from '../services/tasks.service';
 import * as llmService from '../services/llm.service';
@@ -6,8 +7,9 @@ import * as settingsService from '../services/settings.service';
 
 const router = Router();
 
-// 强制 HTTPS（防止 token 明文传输）
+// 强制 HTTPS（防止 token 明文传输）；开发环境（NODE_ENV !== production）放行便于本地调试
 function requireHTTPS(req: Request, res: Response, next: NextFunction) {
+  if (process.env.NODE_ENV !== 'production') return next();
   if (req.secure || req.get('x-forwarded-proto') === 'https') {
     return next();
   }
@@ -15,6 +17,16 @@ function requireHTTPS(req: Request, res: Response, next: NextFunction) {
 }
 
 router.use(requireHTTPS);
+
+// IM 接口限流：每 IP 每分钟 20 次
+const imLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: '请求过于频繁，请稍后再试' },
+});
+router.use(imLimiter);
 
 async function findUserByIMToken(token: string) {
   const userId = await settingsService.getSetting(`im_token_${token}`);

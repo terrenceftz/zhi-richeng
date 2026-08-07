@@ -1,17 +1,26 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { LayoutDashboard, Calendar, Lightbulb, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, Lightbulb, Settings, LogOut, GraduationCap, Bell, Heart, BarChart3, HeartHandshake, FileSpreadsheet } from 'lucide-react';
+import ThemeToggle from '../ui/ThemeToggle';
+import Badge from '../ui/Badge';
 
 const navItems = [
   { to: '/', label: '今日概览', icon: LayoutDashboard },
+  { to: '/stats', label: '数据看板', icon: BarChart3 },
   { to: '/calendar', label: '日历', icon: Calendar },
+  { to: '/students', label: '学生管理', icon: GraduationCap },
+  { to: '/mental', label: '心理台账', icon: Heart },
+  { to: '/counseling', label: '谈心记录', icon: HeartHandshake },
+  { to: '/notices', label: '通知看板', icon: Bell },
+  { to: '/exports', label: '导出中心', icon: FileSpreadsheet },
   { to: '/inspiration', label: '灵感', icon: Lightbulb },
   { to: '/settings', label: '设置', icon: Settings },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const isAdmin = user?.role === 'admin';
 
   const handleLogout = async () => {
     await logout();
@@ -19,18 +28,20 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-bg p-6 flex flex-col h-full shrink-0">
-      <div className="flex items-center gap-4 mb-10">
-        <div className="w-12 h-12 bg-coral rounded-2xl flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black">
-          <span className="text-white text-2xl font-black">智</span>
+    <aside className="flex h-full w-full flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      {/* 品牌 */}
+      <div className="flex items-center gap-3 px-5 py-5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm">
+          <span className="text-lg font-bold">智</span>
         </div>
-        <div>
-          <h1 className="text-xl font-black text-black tracking-tight">智日程</h1>
-          <span className="text-coral font-sans font-bold text-xs block">辅导员的每日任务看板</span>
+        <div className="min-w-0">
+          <h1 className="truncate text-base font-semibold text-slate-900 dark:text-slate-100">智日程</h1>
+          <p className="truncate text-xs text-slate-500 dark:text-slate-400">辅导员智能工作台</p>
         </div>
       </div>
 
-      <nav className="flex-1 flex flex-col gap-3">
+      {/* 导航 */}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -38,32 +49,50 @@ export default function Sidebar() {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              onClick={onNavigate}
               className={({ isActive }) =>
-                `w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 border-2 font-bold ${
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'border-black bg-blue shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black'
-                    : 'border-transparent text-gray-600 hover:border-black hover:bg-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
                 }`
               }
             >
-              <Icon className="w-5 h-5" />
+              <Icon className="h-[18px] w-[18px] shrink-0" />
               <span>{item.label}</span>
             </NavLink>
           );
         })}
       </nav>
 
-      <div className="mt-auto flex items-center gap-4 p-3 bg-white rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black">
-        <div className="w-10 h-10 bg-mint border-2 border-black rounded-xl flex items-center justify-center text-lg overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-          {user?.name?.charAt(0) || 'U'}
+      {/* 主题切换 */}
+      <div className="flex items-center justify-between px-5 py-2">
+        <span className="text-xs text-slate-500 dark:text-slate-400">主题</span>
+        <ThemeToggle />
+      </div>
+
+      {/* 用户卡片 */}
+      <div className="border-t border-slate-200 p-3 dark:border-slate-800">
+        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+            {user?.name?.charAt(0) || 'U'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{user?.name || '用户'}</p>
+              {isAdmin && <Badge tone="brand">管理员</Badge>}
+            </div>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
+          </div>
+          <button
+            onClick={handleLogout}
+            aria-label="退出登录"
+            title="退出登录"
+            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-600 dark:hover:bg-slate-800 dark:hover:text-red-400"
+          >
+            <LogOut className="h-[18px] w-[18px]" />
+          </button>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-black text-black truncate text-sm">{user?.name || '用户'}</p>
-          <p className="text-xs text-gray-500 font-bold truncate">在线</p>
-        </div>
-        <button onClick={handleLogout} className="p-2 hover:bg-rose rounded-lg transition-colors" title="退出">
-          <LogOut className="w-4 h-4 text-gray-400" />
-        </button>
       </div>
     </aside>
   );

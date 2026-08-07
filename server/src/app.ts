@@ -10,6 +10,12 @@ import settingsRoutes from './routes/settings.routes';
 import imRoutes from './routes/im.routes';
 import ideasRoutes from './routes/ideas.routes';
 import backupRoutes from './routes/backup.routes';
+import studentsRoutes from './routes/students.routes';
+import counselingRoutes from './routes/counseling.routes';
+import noticesRoutes from './routes/notices.routes';
+import mentalRoutes from './routes/mental.routes';
+import statsRoutes from './routes/stats.routes';
+import bingRoutes from './routes/bing.routes';
 
 const app = express();
 
@@ -28,8 +34,31 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/im', imRoutes);
 app.use('/api/ideas', ideasRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/students', studentsRoutes);
+app.use('/api/counseling', counselingRoutes);
+app.use('/api/notices', noticesRoutes);
+app.use('/api/mental', mentalRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/bing-wallpaper', bingRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+
+// 生产环境：托管前端构建产物（单容器部署），SPA 回退到 index.html
+if (process.env.NODE_ENV === 'production') {
+  const path = require('path') as typeof import('path');
+  const fs = require('fs') as typeof import('fs');
+  const clientDist = path.resolve(process.cwd(), '../client/dist');
+  if (fs.existsSync(clientDist)) {
+    app.use(express.static(clientDist));
+    app.use((req, res, next) => {
+      if (req.path.startsWith('/api/')) return next();
+      res.sendFile(path.join(clientDist, 'index.html'));
+    });
+    console.log(`[静态] 托管前端构建产物: ${clientDist}`);
+  } else {
+    console.warn(`[静态] 未找到前端构建产物: ${clientDist}`);
+  }
+}
 
 app.use(errorMiddleware);
 

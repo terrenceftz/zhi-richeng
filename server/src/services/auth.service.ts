@@ -1,8 +1,13 @@
 import prisma from '../db';
-import { v4 as uuid } from 'uuid';
 import { hashPassword, comparePassword } from '../utils/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt';
 
+export interface PublicUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
 
 export interface RegisterInput {
   email: string;
@@ -20,34 +25,49 @@ export interface TokenPair {
   refreshToken: string;
 }
 
-export async function register(input: RegisterInput): Promise<{ user: { id: string; email: string; name: string }; tokens: TokenPair }> {
+const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
+
+function toPublicUser(user: { id: string; email: string; name: string; role: string }): PublicUser {
+  return { id: user.id, email: user.email, name: user.name, role: user.role };
+}
+
+function issueTokens(userId: string, role: string): TokenPair {
+  const payload: TokenPayload = { userId, role };
+  return {
+    accessToken: signAccessToken(payload),
+    refreshToken: signRefreshToken(payload),
+  };
+}
+
+export async function register(input: RegisterInput): Promise<{ user: PublicUser; tokens: TokenPair }> {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
     throw Object.assign(new Error('邮箱已被注册'), { statusCode: 409 });
   }
 
   const hashed = await hashPassword(input.password);
+  // 首个用户自动成为管理员
+  const userCount = await prisma.user.count();
+  const role = userCount === 0 ? 'admin' : 'user';
+
   const user = await prisma.user.create({
-    data: { email: input.email, password: hashed, name: input.name },
-    select: { id: true, email: true, name: true },
+    data: { email: input.email, password: hashed, name: input.name, role },
+    select: { id: true, email: true, name: true, role: true },
   });
 
-  const payload: TokenPayload = { userId: user.id };
-  const accessToken = signAccessToken(payload);
-  const refreshTokenValue = signRefreshToken(payload);
-
+  const tokens = issueTokens(user.id, user.role);
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
-      token: refreshTokenValue,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      token: tokens.refreshToken,
+      expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
     },
   });
 
-  return { user, tokens: { accessToken, refreshToken: refreshTokenValue } };
+  return { user: toPublicUser(user), tokens };
 }
 
-export async function login(input: LoginInput): Promise<{ user: { id: string; email: string; name: string }; tokens: TokenPair }> {
+export async function login(input: LoginInput): Promise<{ user: PublicUser; tokens: TokenPair }> {
   const user = await prisma.user.findUnique({ where: { email: input.email } });
   if (!user) {
     throw Object.assign(new Error('邮箱或密码错误'), { statusCode: 401 });
@@ -58,24 +78,25 @@ export async function login(input: LoginInput): Promise<{ user: { id: string; em
     throw Object.assign(new Error('邮箱或密码错误'), { statusCode: 401 });
   }
 
-  const payload: TokenPayload = { userId: user.id };
-  const accessToken = signAccessToken(payload);
-  const refreshTokenValue = signRefreshToken(payload);
-
+  const tokens = issueTokens(user.id, user.role);
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
-      token: refreshTokenValue,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      token: tokens.refreshToken,
+      expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
     },
   });
 
   return {
-    user: { id: user.id, email: user.email, name: user.name },
-    tokens: { accessToken, refreshToken: refreshTokenValue },
+    user: toPublicUser({ id: user.id, email: user.email, name: user.name, role: user.role }),
+    tokens,
   };
 }
 
+/**
+ * 原子化刷新令牌轮换：用事务 + deleteMany 计数判断，
+ * 防止并发请求用同一个 refresh token 重复签发。
+ */
 export async function refresh(refreshTokenValue: string): Promise<TokenPair> {
   let payload: TokenPayload;
   try {
@@ -84,26 +105,29 @@ export async function refresh(refreshTokenValue: string): Promise<TokenPair> {
     throw Object.assign(new Error('无效的 refresh token'), { statusCode: 401 });
   }
 
-  const stored = await prisma.refreshToken.findUnique({ where: { token: refreshTokenValue } });
-  if (!stored || stored.expiresAt < new Date()) {
-    throw Object.assign(new Error('refresh token 已过期'), { statusCode: 401 });
-  }
-
-  await prisma.refreshToken.delete({ where: { id: stored.id } });
-
-  const newPayload: TokenPayload = { userId: payload.userId };
-  const accessToken = signAccessToken(newPayload);
-  const newRefreshToken = signRefreshToken(newPayload);
-
-  await prisma.refreshToken.create({
-    data: {
-      userId: payload.userId,
-      token: newRefreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const deleted = await tx.refreshToken.deleteMany({
+      where: { token: refreshTokenValue, expiresAt: { gt: new Date() } },
+    });
+    if (deleted.count === 0) {
+      // token 不存在、已过期，或已被其它并发请求消费
+      return null;
+    }
+    const newTokens = issueTokens(payload.userId, payload.role || 'user');
+    await tx.refreshToken.create({
+      data: {
+        userId: payload.userId,
+        token: newTokens.refreshToken,
+        expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
+      },
+    });
+    return newTokens;
   });
 
-  return { accessToken, refreshToken: newRefreshToken };
+  if (!result) {
+    throw Object.assign(new Error('refresh token 已过期或无效'), { statusCode: 401 });
+  }
+  return result;
 }
 
 export async function logout(userId: string, refreshTokenValue: string): Promise<void> {

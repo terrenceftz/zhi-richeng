@@ -1,5 +1,7 @@
 import Card from './Card';
 import Button from '../ui/Button';
+import Switch from '../ui/Switch';
+import { useToastStore } from '../../stores/toastStore';
 
 interface Props {
   enabled: boolean;
@@ -9,37 +11,31 @@ interface Props {
 }
 
 export default function ReminderCard({ enabled, minutes, onToggle, onSaveMinutes }: Props) {
-  return (
-    <Card>
-      <h3 className="text-lg font-black mb-1">日程提醒</h3>
-      <p className="font-bold text-sm opacity-50 mb-4">通过飞书机器人提前发送日程提醒</p>
+  const toast = useToastStore();
 
+  return (
+    <Card title="日程提醒" subtitle="通过飞书机器人提前发送日程提醒">
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
           <div>
-            <p className="text-sm font-bold">启用提醒</p>
-            <p className="text-xs font-bold opacity-50">开启后会在日程开始前发送飞书消息</p>
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">启用提醒</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">开启后会在日程开始前发送飞书消息</p>
           </div>
-          <button
-            onClick={() => onToggle(!enabled)}
-            className={`w-12 h-6 rounded-full border-2 border-black transition-colors relative ${enabled ? 'bg-black' : 'bg-gray-200'}`}
-          >
-            <div className={`w-4 h-4 bg-white rounded-full border border-black absolute top-0.5 transition-all ${enabled ? 'left-6' : 'left-0.5'}`} />
-          </button>
+          <Switch checked={enabled} onChange={(v) => { onToggle(v); toast.success(v ? '已开启提醒' : '已关闭提醒'); }} label="启用提醒" />
         </div>
 
         <div>
-          <label className="block text-sm font-bold opacity-50 mb-1">提前时间（分钟）</label>
+          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">提前时间（分钟）</label>
           <div className="flex items-center gap-2">
             <input
               type="number" min={1} max={120} value={minutes}
               onChange={(e) => onSaveMinutes(Math.max(1, Math.min(120, parseInt(e.target.value) || 15)))}
-              className="w-24 bg-white border-2 border-black rounded-xl px-3 py-2 font-bold text-sm focus:outline-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              className="w-24 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               disabled={!enabled}
             />
-            <Button size="sm" onClick={() => onSaveMinutes(minutes)} disabled={!enabled}>保存</Button>
+            <Button size="sm" variant="secondary" onClick={() => { onSaveMinutes(minutes); toast.success('已保存'); }} disabled={!enabled}>保存</Button>
           </div>
-          <p className="text-xs font-bold opacity-50 mt-1">1-120 分钟，默认 15 分钟</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">1-120 分钟，默认 15 分钟</p>
         </div>
       </div>
     </Card>
