@@ -172,6 +172,30 @@ npm run dev
 - 邮箱：`demo@zhi.com`
 - 密码：`123456`
 
+### 6. Docker 部署（可选）
+
+项目内置双容器部署方案（server + client/nginx），生产环境要求配置强 JWT 密钥（`config.ts` 会拒绝默认值）：
+
+```bash
+# 根目录创建 .env（参考 server/.env.example）
+JWT_ACCESS_SECRET=<强随机串>
+JWT_REFRESH_SECRET=<强随机串>
+DEEPSEEK_API_KEY=sk-xxx            # 可选
+FEISHU_APP_ID=cli_xxx              # 可选
+FEISHU_APP_SECRET=xxx              # 可选
+
+docker compose up -d --build
+```
+
+- 访问 `http://localhost`（client 80 端口），API 由 nginx 反代到 server:3001
+- 数据库（`server_data`）与自动备份（`server_backups`）均为持久化 volume
+- 首次启动自动执行 `prisma db push` 同步表结构（幂等，不删数据）
+
+### 自动备份
+
+服务端每小时检查一次，**每天自动备份 SQLite 数据库**到 `backups/auto-YYYY-MM-DD.db`（幂等，保留最近 7 天）。
+手动下载 / 恢复数据库见「设置 → 数据备份」。
+
 ---
 
 ## 项目结构
