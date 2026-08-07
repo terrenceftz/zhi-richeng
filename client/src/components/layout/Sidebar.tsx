@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { LayoutDashboard, Calendar, Lightbulb, Settings, LogOut, GraduationCap, Bell, Heart, BarChart3, HeartHandshake, FileSpreadsheet } from 'lucide-react';
+import { LayoutDashboard, Calendar, Lightbulb, Settings, LogOut, GraduationCap, Bell, Heart, BarChart3, HeartHandshake, FileSpreadsheet, BookOpenText } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import Badge from '../ui/Badge';
 
@@ -65,10 +65,20 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
 
-      {/* 主题切换 */}
-      <div className="flex items-center justify-between px-5 py-2">
-        <span className="text-xs text-slate-500 dark:text-slate-400">主题</span>
-        <ThemeToggle />
+      {/* 页脚：使用指南 + 主题切换 */}
+      <div className="flex items-center justify-between border-t border-slate-200 px-4 py-2 dark:border-slate-800">
+        <NavLink
+          to="/help"
+          onClick={onNavigate}
+          className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-slate-500 transition-colors hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-300"
+        >
+          <BookOpenText className="h-3.5 w-3.5" />
+          使用指南
+        </NavLink>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400">主题</span>
+          <ThemeToggle />
+        </div>
       </div>
 
       {/* 用户卡片 */}

@@ -12,6 +12,7 @@ import StudentsPage from './pages/StudentsPage';
 import MentalPage from './pages/MentalPage';
 import CounselingPage from './pages/CounselingPage';
 import ExportsPage from './pages/ExportsPage';
+import HelpPage from './pages/HelpPage';
 import StatsPage from './pages/StatsPage';
 import NoticesPage from './pages/NoticesPage';
 import AppLayout from './components/layout/AppLayout';
@@ -37,6 +38,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/notices': '通知看板',
   '/exports': '导出中心',
   '/inspiration': '灵感',
+  '/help': '使用指南',
   '/settings': '设置',
 };
 const APP_NAME = '辅导员智能工作台';
@@ -76,6 +78,7 @@ export default function App() {
             <Route path="/notices" element={<NoticesPage />} />
             <Route path="/exports" element={<ExportsPage />} />
             <Route path="/inspiration" element={<InspirationPage />} />
+            <Route path="/help" element={<HelpPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
