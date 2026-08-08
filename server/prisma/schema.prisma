@@ -104,6 +104,7 @@ model Student {
   address     String?      // 家庭住址
   tags        String       @default("[]") // JSON 数组：学业预警/贫困/心理 等
   remark      String?
+  extras      String       @default("{}") // JSON 对象：自定义扩展字段值（学历类别/家长信息等可配置字段）
   college     String       @default("") // 学生所属学院（同学院辅导员共享可见）
   isMentalTarget Boolean   @default(false) // 是否心理台账重点关注学生
   counselings Counseling[]

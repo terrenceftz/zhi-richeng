@@ -1,5 +1,13 @@
 export type UserRole = 'user' | 'dept_admin' | 'admin';
 
+/** 学生扩展字段配置（后台可增删） */
+export interface StudentField {
+  key: string;
+  label: string;
+  type: 'text' | 'select';
+  options?: string[];
+}
+
 export interface User {
   id: string;
   email: string;
@@ -85,6 +93,8 @@ export interface Student {
   address?: string;
   tags: string[];
   remark?: string;
+  extras?: Record<string, any>;
+  college?: string;
   isMentalTarget?: boolean;
   createdAt: string;
   updatedAt: string;

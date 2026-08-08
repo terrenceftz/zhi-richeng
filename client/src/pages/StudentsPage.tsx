@@ -1,24 +1,27 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Plus, Search, Trash2, MessageSquarePlus, Upload, Download, Pencil, Heart, AlertCircle } from 'lucide-react';
+import { GraduationCap, Plus, Search, Trash2, MessageSquarePlus, Upload, Download, Pencil, Heart, AlertCircle, SlidersHorizontal, X } from 'lucide-react';
 import * as studentsApi from '../api/students';
 import * as counselingApi from '../api/counseling';
 import * as mentalApi from '../api/mental';
-import type { Student, Counseling, MentalRecord, MentalProfile } from '../types';
+import type { Student, Counseling, MentalRecord, MentalProfile, StudentField } from '../types';
 import { COUNSELING_TYPES, STUDENT_TYPES, STUDENT_TYPE_LABELS, MENTAL_LEVELS, MENTAL_LEVEL_LABELS, MENTAL_STATUS_LABELS, MENTAL_CATEGORIES, CONCERN_LEVEL_LABELS } from '../types';
 import Card from '../components/ui/Card';
 import { KirbyTitleIcon } from '../components/theme/KirbyDecorations';
 import Button from '../components/ui/Button';
 import Input, { Select, Textarea } from '../components/ui/Input';
 import Drawer from '../components/ui/Drawer';
+import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import Switch from '../components/ui/Switch';
 import { LoadingState, EmptyState } from '../components/ui/Feedback';
 import { useToastStore } from '../stores/toastStore';
+import { useAuthStore } from '../stores/authStore';
 import { parseExcelFile, downloadTemplate } from '../utils/studentImport';
 
 export default function StudentsPage() {
   const toast = useToastStore();
+  const { user } = useAuthStore();
   const [students, setStudents] = useState<Student[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -34,7 +37,23 @@ export default function StudentsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  // 扩展字段配置
+  const [extraFields, setExtraFields] = useState<StudentField[]>([]);
+  const [presetFields, setPresetFields] = useState<StudentField[]>([]);
+  const [builtinFields, setBuiltinFields] = useState<StudentField[]>([]);
+  const [fieldOpen, setFieldOpen] = useState(false);
+  const canManageFields = user?.role === 'admin' || user?.role === 'dept_admin';
   const pageSize = 30;
+
+  // 加载学生字段配置
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    studentsApi.fetchStudentFields().then((d) => {
+      setExtraFields(d.fields || []);
+      setPresetFields(d.presets || []);
+      setBuiltinFields(d.builtins || []);
+    }).catch(() => {});
+  }, []);
 
   const load = async (targetPage = page) => {
     setLoading(true);
@@ -139,13 +158,12 @@ export default function StudentsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const list = await parseExcelFile(file);
+      const list = await parseExcelFile(file, extraFields);
       if (list.length === 0) {
         toast.error('未解析到有效数据，请检查表头是否包含「姓名」');
       } else {
         const res = await studentsApi.importStudents(list);
-        const skipMsg = res.skipped ? `，跳过 ${res.skipped} 名学号已存在的学生` : '';
-        toast.success(`已导入 ${res.count} 名学生${skipMsg}`);
+        toast.success(res.message || `已导入 ${res.created} 名新增、更新 ${res.updated} 名`);
         load(1);
         loadFilters();
       }
@@ -164,11 +182,16 @@ export default function StudentsPage() {
           学生管理
         </h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onClick={downloadTemplate}>
+          {canManageFields && (
+            <Button variant="secondary" onClick={() => setFieldOpen(true)}>
+              <SlidersHorizontal className="h-4 w-4" /> 字段管理
+            </Button>
+          )}
+          <Button variant="secondary" onClick={() => downloadTemplate(extraFields)}>
             <Download className="h-4 w-4" /> 下载模板
           </Button>
           <label
-            title="导入学生花名册（姓名/学号/班级等），学号已存在的学生将自动跳过，不会覆盖或重复创建"
+            title="导入学生花名册：按学号/证件号匹配已有学生则覆盖更新，否则新建"
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             <Upload className="h-4 w-4" /> 导入花名册
@@ -220,6 +243,9 @@ export default function StudentsPage() {
                   <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">学生类型</th>
                   <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">手机</th>
                   <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">台账</th>
+                  {extraFields.map((f) => (
+                    <th key={f.key} className="whitespace-nowrap px-3 py-3 font-medium md:px-4">{f.label}</th>
+                  ))}
                   <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">操作</th>
                 </tr>
               </thead>
@@ -253,6 +279,11 @@ export default function StudentsPage() {
                         {s.isMentalTarget ? `${s._count?.mentalRecords || 0} 条` : '标记'}
                       </button>
                     </td>
+                    {extraFields.map((f) => (
+                      <td key={f.key} className="max-w-[10rem] truncate px-3 py-3 text-slate-600 dark:text-slate-300 md:px-4">
+                        {s.extras?.[f.key] != null && s.extras[f.key] !== '' ? String(s.extras[f.key]) : '-'}
+                      </td>
+                    ))}
                     <td className="px-3 py-3 md:px-4">
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEdit(s)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800" aria-label="编辑">
@@ -318,7 +349,7 @@ export default function StudentsPage() {
 
       {/* 添加/编辑抽屉 */}
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={editing ? '编辑学生' : '添加学生'} width="max-w-lg">
-        <StudentForm key={editing?.id || 'create'} initial={editing || undefined} onSubmit={handleSave} onCancel={() => setDrawerOpen(false)} />
+        <StudentForm key={editing?.id || 'create'} initial={editing || undefined} fields={extraFields} onSubmit={handleSave} onCancel={() => setDrawerOpen(false)} />
       </Drawer>
 
       {/* 详情 + 谈心/台账 */}
@@ -327,6 +358,7 @@ export default function StudentsPage() {
           <StudentDetail
             key={detailStudent.id}
             student={detailStudent}
+            fields={extraFields}
             onToggleMental={() => handleToggleMental(detailStudent)}
             onMentalChanged={() => load()}
             onProfileSaved={async () => {
@@ -338,11 +370,25 @@ export default function StudentsPage() {
           />
         )}
       </Drawer>
+
+      {/* 字段管理弹窗（系统管理员/院系管理员） */}
+      {fieldOpen && (
+        <FieldManager
+          fields={extraFields}
+          presets={presetFields}
+          builtins={builtinFields}
+          onClose={() => setFieldOpen(false)}
+          onSaved={(fields) => {
+            setExtraFields(fields);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function StudentForm({ initial, onSubmit, onCancel }: { initial?: Student; onSubmit: (d: Partial<Student>) => Promise<void>; onCancel: () => void }) {
+function StudentForm({ initial, fields, onSubmit, onCancel }: { initial?: Student; fields: StudentField[]; onSubmit: (d: Partial<Student>) => Promise<void>; onCancel: () => void }) {
   const [name, setName] = useState(initial?.name || '');
   const [studentNo, setStudentNo] = useState(initial?.studentNo || '');
   const [gender, setGender] = useState(initial?.gender || '');
@@ -356,12 +402,18 @@ function StudentForm({ initial, onSubmit, onCancel }: { initial?: Student; onSub
   const [dormitory, setDormitory] = useState(initial?.dormitory || '');
   const [address, setAddress] = useState(initial?.address || '');
   const [remark, setRemark] = useState(initial?.remark || '');
+  const [extras, setExtras] = useState<Record<string, any>>(initial?.extras || {});
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanExtras: Record<string, any> = {};
+    Object.entries(extras).forEach(([k, v]) => {
+      if (v != null && v !== '') cleanExtras[k] = v;
+    });
     await onSubmit({
       name, studentNo, gender, birthDate: birthDate || undefined, studentType: studentType || undefined,
       idNumber, grade, className, hometown, phone, dormitory, address, remark,
+      extras: Object.keys(cleanExtras).length > 0 ? cleanExtras : undefined,
     });
   };
 
@@ -387,6 +439,18 @@ function StudentForm({ initial, onSubmit, onCancel }: { initial?: Student; onSub
         <Input label="手机" id="sPhone" value={phone} onChange={(e) => setPhone(e.target.value)} />
         <Input label="宿舍" id="sDorm" value={dormitory} onChange={(e) => setDormitory(e.target.value)} />
         <Input label="家庭住址" id="sAddr" value={address} onChange={(e) => setAddress(e.target.value)} />
+        {fields.map((f) => (
+          f.type === 'select'
+            ? (
+              <Select key={f.key} label={f.label} id={`sX-${f.key}`} value={extras[f.key] || ''} onChange={(e) => setExtras({ ...extras, [f.key]: e.target.value })}>
+                <option value="">未填写</option>
+                {(f.options || []).map((o) => <option key={o} value={o}>{o}</option>)}
+              </Select>
+            )
+            : (
+              <Input key={f.key} label={f.label} id={`sX-${f.key}`} value={extras[f.key] || ''} onChange={(e) => setExtras({ ...extras, [f.key]: e.target.value })} />
+            )
+        ))}
       </div>
       <Textarea label="备注" id="sRemark" value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="关注事项、家庭情况等" />
       <div className="flex gap-3 pt-1">
@@ -397,8 +461,9 @@ function StudentForm({ initial, onSubmit, onCancel }: { initial?: Student; onSub
   );
 }
 
-function StudentDetail({ student, onToggleMental, onMentalChanged, onProfileSaved }: {
+function StudentDetail({ student, fields, onToggleMental, onMentalChanged, onProfileSaved }: {
   student: Student;
+  fields: StudentField[];
   onToggleMental: () => void;
   onMentalChanged: () => void;
   onProfileSaved: () => Promise<void>;
@@ -473,6 +538,9 @@ function StudentDetail({ student, onToggleMental, onMentalChanged, onProfileSave
             <Info label="手机" value={student.phone} />
             <Info label="宿舍" value={student.dormitory} />
             <Info label="家庭住址" value={student.address} />
+            {fields.map((f) => (
+              <Info key={f.key} label={f.label} value={student.extras?.[f.key] != null ? String(student.extras[f.key]) : undefined} />
+            ))}
           </div>
           {student.remark && (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300">
@@ -864,5 +932,139 @@ function Info({ label, value }: { label: string; value?: string }) {
       <dt className="text-xs text-slate-500 dark:text-slate-400">{label}</dt>
       <dd className="text-slate-700 dark:text-slate-200">{value || '-'}</dd>
     </div>
+  );
+}
+
+/** 字段管理弹窗：内置字段只读 + 扩展字段增删（预置模板/自定义） */
+function FieldManager({ fields, presets, builtins, onClose, onSaved }: {
+  fields: StudentField[];
+  presets: StudentField[];
+  builtins: StudentField[];
+  onClose: () => void;
+  onSaved: (fields: StudentField[]) => void;
+}) {
+  const toast = useToastStore();
+  const [draft, setDraft] = useState<StudentField[]>(fields);
+  const [presetKey, setPresetKey] = useState('');
+  const [customLabel, setCustomLabel] = useState('');
+  const [customType, setCustomType] = useState<'text' | 'select'>('text');
+  const [customOptions, setCustomOptions] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const addPreset = () => {
+    const p = presets.find((x) => x.key === presetKey);
+    if (!p) return;
+    if (draft.some((f) => f.key === p.key)) {
+      toast.error('该字段已添加');
+      return;
+    }
+    setDraft([...draft, p]);
+    setPresetKey('');
+  };
+
+  const addCustom = () => {
+    const label = customLabel.trim();
+    if (!label) { toast.error('请输入字段名称'); return; }
+    const key = `f_${Date.now().toString(36)}`;
+    setDraft([...draft, {
+      key,
+      label,
+      type: customType,
+      options: customType === 'select' ? customOptions.split(/[,，]/).map((s) => s.trim()).filter(Boolean) : undefined,
+    }]);
+    setCustomLabel('');
+    setCustomOptions('');
+  };
+
+  const removeField = (key: string) => setDraft(draft.filter((f) => f.key !== key));
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const saved = await studentsApi.saveStudentFields(draft);
+      toast.success('字段已保存，学生表单/表格/导入导出已同步');
+      onSaved(saved);
+      onClose();
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存失败';
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open title="学生字段管理" onClose={onClose}>
+      <div className="space-y-4">
+        {/* 内置字段（只读） */}
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-slate-600 dark:text-slate-400">内置字段（不可删除）</p>
+          <div className="flex flex-wrap gap-1.5">
+            {builtins.map((f) => (
+              <span key={f.key} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">{f.label}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* 扩展字段 */}
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-slate-600 dark:text-slate-400">扩展字段（{draft.length}）</p>
+          {draft.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-400 dark:border-slate-700">暂无扩展字段，可在下方添加（如学历类别、家长姓名、家长联系电话等）</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {draft.map((f) => (
+                <li key={f.key} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/50">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{f.label}</p>
+                    <p className="text-xs text-slate-400">{f.type === 'select' ? `下拉：${(f.options || []).join(' / ')}` : '文本'}</p>
+                  </div>
+                  <button onClick={() => removeField(f.key)} aria-label="删除字段" className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10">
+                    <X className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* 添加：预置模板 */}
+        <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+          <p className="mb-1.5 text-sm font-medium text-slate-600 dark:text-slate-400">从常用字段添加</p>
+          <div className="flex gap-2">
+            <select className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" value={presetKey} onChange={(e) => setPresetKey(e.target.value)}>
+              <option value="">选择字段...</option>
+              {presets.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            </select>
+            <Button size="sm" variant="secondary" onClick={addPreset} disabled={!presetKey}>添加</Button>
+          </div>
+        </div>
+
+        {/* 添加：自定义 */}
+        <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+          <p className="mb-1.5 text-sm font-medium text-slate-600 dark:text-slate-400">自定义字段</p>
+          <div className="space-y-2">
+            <input className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100" value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} placeholder="字段名称，如：家长工作单位" />
+            <div className="flex gap-2">
+              <select className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" value={customType} onChange={(e) => setCustomType(e.target.value as 'text' | 'select')}>
+                <option value="text">文本</option>
+                <option value="select">下拉选项</option>
+              </select>
+              {customType === 'select' && (
+                <input className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100" value={customOptions} onChange={(e) => setCustomOptions(e.target.value)} placeholder="选项用逗号分隔，如：本科,硕士" />
+              )}
+              <Button size="sm" variant="secondary" onClick={addCustom}>添加</Button>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-400">保存后，学生添加/编辑表单、列表、详情、导入模板与导出 Excel 都会同步包含这些字段。</p>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="secondary" onClick={onClose}>取消</Button>
+          <Button onClick={save} disabled={saving}>{saving ? '保存中...' : '保存字段'}</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

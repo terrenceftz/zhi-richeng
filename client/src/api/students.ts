@@ -43,7 +43,19 @@ export async function deleteStudent(id: string): Promise<void> {
   await client.delete(`/students/${id}`);
 }
 
-export async function importStudents(students: Partial<Student>[]): Promise<{ count: number; skipped: number; message: string }> {
+export async function importStudents(students: Partial<Student>[]): Promise<{ created: number; updated: number; message: string }> {
   const { data } = await client.post('/students/import', { students });
-  return { count: data.count, skipped: data.skipped || 0, message: data.message || '' };
+  return { created: data.created || 0, updated: data.updated || 0, message: data.message || '' };
+}
+
+/** 学生扩展字段配置（fields/presets/builtins） */
+export async function fetchStudentFields(): Promise<{ fields: any[]; presets: any[]; builtins: any[] }> {
+  const { data } = await client.get('/students/fields');
+  return data;
+}
+
+/** 保存学生扩展字段（系统管理员/院系管理员） */
+export async function saveStudentFields(fields: any[]): Promise<any[]> {
+  const { data } = await client.put('/students/fields', { fields });
+  return data.fields || [];
 }

@@ -52,10 +52,35 @@ router.get('/grades', async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
+// 学生字段配置：读取（任何登录用户）
+router.get('/fields', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fields = await studentsService.getStudentFields();
+    res.json({ fields, presets: studentsService.PRESET_STUDENT_FIELDS, builtins: studentsService.BUILTIN_STUDENT_FIELDS });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 学生字段配置：保存（系统管理员/院系管理员）
+router.put('/fields', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!['admin', 'dept_admin'].includes(req.userRole || '')) {
+      return res.status(403).json({ message: '需要系统管理员或院系管理员权限' });
+    }
+    const fields = await studentsService.saveStudentFields(req.body?.fields);
+    await audit.log(req.userId!, 'settings_update', { detail: `更新学生扩展字段（${fields.length} 个）`, ip: req.ip });
+    res.json({ fields });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // 花名册 Excel 导出（全量字段，按可见范围）
 router.get('/export/excel', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { visibleStudentWhere } = await import('../utils/scope');
+    const extraFields = await studentsService.getStudentFields();
     const students = await prisma.student.findMany({
       where: visibleStudentWhere(ctxOf(req)),
       include: { mentalProfile: true },
@@ -63,7 +88,11 @@ router.get('/export/excel', async (req: Request, res: Response, next: NextFuncti
     });
     const rows = students.map((s) => {
       const p = s.mentalProfile;
-      return {
+      let extras: Record<string, any> = {};
+      if (typeof s.extras === 'string') {
+        try { extras = JSON.parse(s.extras); } catch { extras = {}; }
+      }
+      const row: Record<string, any> = {
         姓名: s.name,
         学号: s.studentNo || '',
         性别: s.gender || '',
@@ -80,13 +109,20 @@ router.get('/export/excel', async (req: Request, res: Response, next: NextFuncti
         关注级别: p ? (p.concernLevel || 1) : '',
         备注: s.remark || '',
       };
+      // 扩展字段列（按字段配置）
+      extraFields.forEach((f) => {
+        row[f.label] = extras[f.key] != null ? String(extras[f.key]) : '';
+      });
+      return row;
     });
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [
+    const cols = [
       { wch: 10 }, { wch: 14 }, { wch: 6 }, { wch: 12 }, { wch: 8 },
       { wch: 22 }, { wch: 8 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
       { wch: 12 }, { wch: 24 }, { wch: 8 }, { wch: 8 }, { wch: 20 },
+      ...extraFields.map(() => ({ wch: 12 })),
     ];
+    ws['!cols'] = cols;
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '学生花名册');
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
@@ -175,28 +211,13 @@ router.post('/import', upload.single('file'), async (req: Request, res: Response
         address: s.address ? String(s.address) : undefined,
         remark: s.remark ? String(s.remark) : undefined,
         college: s.college ? String(s.college) : undefined, // 可选，缺省用导入者学院
+        extras: s.extras && typeof s.extras === 'object' ? s.extras : undefined, // 自定义扩展字段
       }));
 
-    // 预防重复：本学院/可见范围内批量查重（一次查询替代 N 次 findFirst）
-    const { visibleStudentWhere } = await import('../utils/scope');
-    const nosToCheck = cleaned.map((s) => s.studentNo).filter(Boolean) as string[];
-    const existing = nosToCheck.length > 0
-      ? await prisma.student.findMany({ where: { ...visibleStudentWhere(ctxOf(req)), studentNo: { in: nosToCheck } }, select: { studentNo: true } })
-      : [];
-    const existingSet = new Set(existing.map((s) => s.studentNo));
-    const skipNo: string[] = [];
-    const toCreate: typeof cleaned = [];
-    for (const s of cleaned) {
-      if (s.studentNo && existingSet.has(s.studentNo)) {
-        skipNo.push(s.studentNo);
-      } else {
-        toCreate.push(s);
-      }
-    }
-
-    const created = await studentsService.createStudentsBatch(ctxOf(req), toCreate);
-    const skipMsg = skipNo.length > 0 ? `，跳过 ${skipNo.length} 名已存在（学号重复，未覆盖）` : '';
-    res.status(201).json({ count: created.length, skipped: skipNo.length, message: `已导入 ${created.length} 名学生${skipMsg}` });
+    // 覆盖更新导入：按学号/证件号匹配已存在学生则覆盖，否则新建
+    const result = await studentsService.upsertStudents(ctxOf(req), cleaned);
+    const msg = `已导入 ${result.created} 名新增学生，更新 ${result.updated} 名已有学生（按学号/证件号匹配覆盖）`;
+    res.status(201).json({ created: result.created, updated: result.updated, message: msg });
   } catch (err) {
     next(err);
   }

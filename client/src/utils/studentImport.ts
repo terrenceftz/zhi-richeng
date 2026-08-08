@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import type { StudentField } from '../types';
 
 /** Excel 表头 → 后端字段名的映射（支持中英文多种写法） */
 const HEADER_MAP: Record<string, string> = {
@@ -60,16 +61,30 @@ export interface ParsedStudent {
   dormitory?: string;
   address?: string;
   remark?: string;
+  extras?: Record<string, any>;
 }
 
-/** 把一行原始对象按表头映射成标准学生对象 */
-function mapRow(row: Record<string, unknown>): ParsedStudent | null {
+/** 把一行原始对象按表头映射成标准学生对象（fields 为扩展字段配置） */
+function mapRow(row: Record<string, unknown>, fields: StudentField[]): ParsedStudent | null {
   const out: Partial<Record<string, string>> = {};
+  const extras: Record<string, any> = {};
+  // 扩展字段：表头（label）→ extras[key]
+  const labelMap: Record<string, string> = {};
+  fields.forEach((f) => { labelMap[f.label.trim().toLowerCase()] = f.key; });
+
   for (const [k, v] of Object.entries(row)) {
-    const key = HEADER_MAP[String(k).trim().toLowerCase()] || HEADER_MAP[String(k).trim()];
-    if (!key) continue;
-    if (v == null || v === '') continue;
-    out[key] = String(v).trim();
+    const header = String(k).trim();
+    const key = HEADER_MAP[header.toLowerCase()] || HEADER_MAP[header];
+    if (key) {
+      if (v == null || v === '') continue;
+      out[key] = String(v).trim();
+      continue;
+    }
+    // 匹配扩展字段表头
+    const extKey = labelMap[header.toLowerCase()];
+    if (extKey && v != null && v !== '') {
+      extras[extKey] = String(v).trim();
+    }
   }
   const name = out.name;
   if (!name) return null;
@@ -93,27 +108,29 @@ function mapRow(row: Record<string, unknown>): ParsedStudent | null {
     dormitory: out.dormitory,
     address: out.address,
     remark: out.remark,
+    extras: Object.keys(extras).length > 0 ? extras : undefined,
   };
 }
 
-/** 解析 Excel 文件为标准学生对象数组 */
-export async function parseExcelFile(file: File): Promise<ParsedStudent[]> {
+/** 解析 Excel 文件为标准学生对象数组（fields 为扩展字段配置） */
+export async function parseExcelFile(file: File, fields: StudentField[] = []): Promise<ParsedStudent[]> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array', cellDates: true });
   const sheet = wb.Sheets[wb.SheetNames[0]];
   if (!sheet) return [];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
-  return rows.map(mapRow).filter((r): r is ParsedStudent => r !== null);
+  return rows.map((r) => mapRow(r, fields)).filter((r): r is ParsedStudent => r !== null);
 }
 
-/** 下载学生导入 Excel 模板 */
-export function downloadTemplate(): void {
+/** 下载学生导入 Excel 模板（列跟随字段配置） */
+export function downloadTemplate(fields: StudentField[] = []): void {
   const headers = [
     '姓名', '学号', '性别', '出生日期', '学生类型', '证件号码', '年级', '班级', '籍贯', '手机', '宿舍', '家庭住址', '备注',
+    ...fields.map((f) => f.label),
   ];
   const sample = [
-    ['张三', '20240001', '男', '2005-03-15', '境内生', '110101200503151234', '2024级', '计科1班', '福建泉州', '13800000001', '梅苑1-101', '福建省泉州市XX路', ''],
-    ['李四', '20240002', '女', '2005-07-20', '境外生', 'P12345678', '2024级', '计科1班', '香港', '13800000002', '梅苑1-102', '香港特别行政区', ''],
+    ['张三', '20240001', '男', '2005-03-15', '境内生', '110101200503151234', '2024级', '计科1班', '福建泉州', '13800000001', '梅苑1-101', '福建省泉州市XX路', '', ...fields.map(() => '')],
+    ['李四', '20240002', '女', '2005-07-20', '境外生', 'P12345678', '2024级', '计科1班', '香港', '13800000002', '梅苑1-102', '香港特别行政区', '', ...fields.map(() => '')],
   ];
   const aoa = [headers, ...sample];
   const ws = XLSX.utils.aoa_to_sheet(aoa);
