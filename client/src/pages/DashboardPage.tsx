@@ -18,6 +18,7 @@ import TaskForm from '../components/tasks/TaskForm';
 import Drawer from '../components/ui/Drawer';
 import { EmptyState, LoadingState } from '../components/ui/Feedback';
 import Card from '../components/ui/Card';
+import { fetchWallpaper, type BingWallpaper } from '../api/wallpaper';
 
 export default function DashboardPage() {
   const { tasks, selectedDate, isLoading, fetchTasks, createTask, deleteTask, setSelectedDate } = useTaskStore();
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const holidayCountdown = useMemo(() => getNextHolidayCountdown(), []);
   const [teachingWeek, setTeachingWeek] = useState<{ name: string; week: number | null; isBreak: boolean } | null>(null);
   const [breakCountdown, setBreakCountdown] = useState<{ label: string; daysUntil: number } | null>(null);
+  const [wallpaper, setWallpaper] = useState<BingWallpaper | null>(null);
   const [overdueTasks, setOverdueTasks] = useState<Task[]>([]);
   const [showOverdue, setShowOverdue] = useState(false);
 
@@ -39,6 +41,14 @@ export default function DashboardPage() {
       .then(setOverdueTasks)
       .catch(() => setOverdueTasks([]));
   }, [tasks]);
+
+  // 拉取必应每日壁纸（失败时保持渐变兜底）
+  useEffect(() => {
+    let alive = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchWallpaper().then((w) => { if (alive) setWallpaper(w); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     const CACHE_KEY = 'zrc_semester_cache';
@@ -113,36 +123,83 @@ export default function DashboardPage() {
 
   const isToday = selectedDate === new Date().toISOString().slice(0, 10);
 
+  // 时段问候
+  const hour = new Date().getHours();
+  const greetingWord = hour < 6 ? '夜深了' : hour < 11 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好';
+
   return (
     <div>
       {/* 问候卡 */}
-      <Card className="mb-6 bg-gradient-to-br from-brand-600 to-brand-700 !border-0 text-white">
-        <div className="flex items-start justify-between gap-4">
+      <Card className="relative mb-6 min-h-[140px] overflow-hidden !border-0 bg-gradient-to-br from-brand-600 via-brand-700 to-brand-800 text-white shadow-lg shadow-brand-900/20 dark:from-brand-700 dark:via-brand-800 dark:to-slate-900">
+        {/* 必应每日壁纸（无壁纸时保持上方渐变兜底） */}
+        {wallpaper && (
+          <img
+            src={wallpaper.url}
+            alt=""
+            aria-hidden
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+        {/* 深色渐变遮罩：保证文字可读 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-brand-900/60 to-black/40 dark:from-black/85 dark:via-slate-900/70 dark:to-black/55" />
+
+        {/* 装饰光斑 */}
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 right-1/3 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute right-6 top-6 text-7xl opacity-10">📅</div>
+
+        <div className="relative flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h2 className="text-xl font-semibold">
-              {isToday ? '你好' : '查看中'}，{user?.name || '老师'} 👋
+            <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight drop-shadow-sm">
+              {greetingWord}，{user?.name || '老师'}
+              <motion.span
+                animate={{ rotate: [0, 14, -8, 14, 0] }}
+                transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 3 }}
+                className="inline-block"
+              >
+                👋
+              </motion.span>
             </h2>
-            <p className="mt-1 text-sm text-brand-100">
+            <p className="mt-1.5 text-sm text-white/85">
               {new Date(selectedDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
             </p>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-brand-50">
+            <div className="mt-3 flex flex-wrap gap-2">
               {teachingWeek && !teachingWeek.isBreak && teachingWeek.week && (
-                <span>📚 {teachingWeek.name} · 第 {teachingWeek.week} 周</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-medium backdrop-blur-sm ring-1 ring-white/25">
+                  📚 {teachingWeek.name} · 第 {teachingWeek.week} 周
+                </span>
               )}
               {holidayCountdown && (
                 holidayCountdown.isToday ? (
-                  <span>🎉 今天是{holidayCountdown.name}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/40 px-3 py-1 text-xs font-medium ring-1 ring-amber-200/40 backdrop-blur-sm">
+                    🎉 今天是{holidayCountdown.name}
+                  </span>
                 ) : (
-                  <span>🎉 距{holidayCountdown.name}还有 {holidayCountdown.daysUntil} 天</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/40 px-3 py-1 text-xs font-medium ring-1 ring-amber-200/40 backdrop-blur-sm">
+                    🎉 距{holidayCountdown.name} {holidayCountdown.daysUntil} 天
+                  </span>
                 )
               )}
               {breakCountdown && (
-                <span>🏖️ 距{breakCountdown.label}还有 {breakCountdown.daysUntil} 天</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/35 px-3 py-1 text-xs font-medium ring-1 ring-emerald-200/30 backdrop-blur-sm">
+                  🏖️ 距{breakCountdown.label} {breakCountdown.daysUntil} 天
+                </span>
               )}
             </div>
           </div>
-          <p className="hidden max-w-[200px] text-right text-sm italic text-brand-100 sm:block">“{quote}”</p>
+          <div className="hidden max-w-[220px] flex-col items-end gap-2 sm:flex">
+            <span className="text-2xl leading-none">💭</span>
+            <p className="text-right text-sm italic leading-relaxed text-white/90">“{quote}”</p>
+          </div>
         </div>
+
+        {/* 壁纸版权角标 */}
+        {wallpaper?.copyright && (
+          <p className="absolute bottom-2 right-3 z-10 hidden max-w-[55%] truncate text-[10px] text-white/55 lg:block">
+            {wallpaper.copyright}
+          </p>
+        )}
       </Card>
 
       {/* 逾期任务提醒 */}
