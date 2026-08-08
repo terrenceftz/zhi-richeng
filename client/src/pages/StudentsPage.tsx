@@ -211,47 +211,49 @@ export default function StudentsPage() {
           <EmptyState title="还没有学生" hint="点击「添加学生」手动录入，或用「导入 Excel」批量导入" icon={<GraduationCap className="h-6 w-6" />} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[620px] text-[13px] md:min-w-0 md:text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                  <th className="px-4 py-3 font-medium">姓名</th>
-                  <th className="px-4 py-3 font-medium">学号</th>
-                  <th className="px-4 py-3 font-medium">班级 / 年级</th>
-                  <th className="px-4 py-3 font-medium">学生类型</th>
-                  <th className="px-4 py-3 font-medium">手机</th>
-                  <th className="px-4 py-3 font-medium">台账</th>
-                  <th className="px-4 py-3 font-medium">操作</th>
+                  <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">姓名</th>
+                  <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">学号</th>
+                  <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">班级 / 年级</th>
+                  <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">学生类型</th>
+                  <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">手机</th>
+                  <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">台账</th>
+                  <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {students.map((s) => (
                   <tr key={s.id} className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/40 ${s.isMentalTarget ? 'bg-red-50/30 dark:bg-red-500/5' : ''}`}>
-                    <td className="px-4 py-3">
-                      <button onClick={() => openDetail(s)} className="flex items-center gap-2 font-medium text-brand-600 hover:underline dark:text-brand-400">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+                    <td className="px-3 py-3 md:px-4">
+                      <button onClick={() => openDetail(s)} className="flex min-w-0 max-w-[12rem] items-center gap-2 font-medium text-brand-600 hover:underline dark:text-brand-400">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
                           {s.name.charAt(0)}
                         </span>
-                        {s.name}
-                        {s.isMentalTarget && <Heart className="h-3.5 w-3.5 fill-red-500 text-red-500" />}
+                        <span className="truncate">{s.name}</span>
+                        {s.isMentalTarget && <Heart className="h-3.5 w-3.5 shrink-0 fill-red-500 text-red-500" />}
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{s.studentNo || '-'}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                      {s.className || '-'}{s.grade ? <span className="text-slate-400"> / {s.grade}</span> : null}
+                    <td className="whitespace-nowrap px-3 py-3 text-slate-600 dark:text-slate-300 md:px-4">{s.studentNo || '-'}</td>
+                    <td className="px-3 py-3 text-slate-600 dark:text-slate-300 md:px-4">
+                      <span className="block max-w-[12rem] truncate">
+                        {s.className || '-'}{s.grade ? <span className="text-slate-400"> / {s.grade}</span> : null}
+                      </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="whitespace-nowrap px-3 py-3 md:px-4">
                       {s.studentType
                         ? <Badge tone={s.studentType === 'overseas' ? 'blue' : 'gray'}>{STUDENT_TYPE_LABELS[s.studentType] || s.studentType}</Badge>
                         : <span className="text-slate-400">-</span>}
                     </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{s.phone || '-'}</td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => handleToggleMental(s)} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${s.isMentalTarget ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'}`}>
+                    <td className="whitespace-nowrap px-3 py-3 text-slate-600 dark:text-slate-300 md:px-4">{s.phone || '-'}</td>
+                    <td className="px-3 py-3 md:px-4">
+                      <button onClick={() => handleToggleMental(s)} className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${s.isMentalTarget ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'}`}>
                         <Heart className={`h-3 w-3 ${s.isMentalTarget ? 'fill-current' : ''}`} />
                         {s.isMentalTarget ? `${s._count?.mentalRecords || 0} 条` : '标记'}
                       </button>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-3 md:px-4">
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEdit(s)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800" aria-label="编辑">
                           <Pencil className="h-4 w-4" />

@@ -1,21 +1,40 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
-import { LayoutDashboard, Calendar, Lightbulb, Settings, LogOut, GraduationCap, Bell, Heart, BarChart3, HeartHandshake, FileSpreadsheet, BookOpenText, ShieldCheck, Building2 } from 'lucide-react';
+import { LayoutDashboard, Calendar, Lightbulb, Settings, LogOut, GraduationCap, Bell, Heart, BarChart3, HeartHandshake, FileSpreadsheet, BookOpenText, ShieldCheck, Building2, Repeat } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import Badge from '../ui/Badge';
 
-const navItems = [
-  { to: '/', label: '今日概览', icon: LayoutDashboard },
-  { to: '/stats', label: '数据看板', icon: BarChart3 },
-  { to: '/calendar', label: '日历', icon: Calendar },
-  { to: '/students', label: '学生管理', icon: GraduationCap },
-  { to: '/mental', label: '心理台账', icon: Heart },
-  { to: '/counseling', label: '谈心记录', icon: HeartHandshake },
-  { to: '/notices', label: '通知看板', icon: Bell },
-  { to: '/exports', label: '导出中心', icon: FileSpreadsheet },
-  { to: '/inspiration', label: '灵感', icon: Lightbulb },
-  { to: '/settings', label: '设置', icon: Settings },
+const navGroups = [
+  {
+    label: '工作台',
+    items: [
+      { to: '/', label: '今日概览', icon: LayoutDashboard },
+      { to: '/stats', label: '数据看板', icon: BarChart3 },
+      { to: '/calendar', label: '日历', icon: Calendar },
+    ],
+  },
+  {
+    label: '学生工作',
+    items: [
+      { to: '/students', label: '学生管理', icon: GraduationCap },
+      { to: '/mental', label: '心理台账', icon: Heart },
+      { to: '/counseling', label: '谈心记录', icon: HeartHandshake },
+    ],
+  },
+  {
+    label: '日常工具',
+    items: [
+      { to: '/notices', label: '通知看板', icon: Bell },
+      { to: '/exports', label: '导出中心', icon: FileSpreadsheet },
+      { to: '/inspiration', label: '灵感', icon: Lightbulb },
+      { to: '/recurring', label: '周期任务', icon: Repeat },
+    ],
+  },
+  {
+    label: '',
+    items: [{ to: '/settings', label: '设置', icon: Settings }],
+  },
 ];
 
 export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -45,29 +64,40 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </div>
 
-      {/* 导航 */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
-                }`
-              }
-            >
-              <Icon className="h-[18px] w-[18px] shrink-0" />
-              <span>{item.label}</span>
-            </NavLink>
-          );
-        })}
+      {/* 导航（按功能分组） */}
+      <nav className="flex-1 overflow-y-auto px-3 py-3">
+        {navGroups.map((group) => (
+          <div key={group.label || 'misc'} className={group.label ? 'mb-3' : 'mb-1'}>
+            {group.label && (
+              <p className="px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/'}
+                    onClick={onNavigate}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-brand-50 font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300'
+                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+                      }`
+                    }
+                  >
+                    <Icon className="h-[18px] w-[18px] shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* 页脚：使用指南 + 主题切换 */}

@@ -5,7 +5,7 @@ import { startFeishuClient, stopFeishuClient } from './services/feishu.service';
 import { startReminderService, stopReminderService } from './services/reminder.service';
 import { startDigestService, stopDigestService } from './services/digest.service';
 import { startCleanupService, stopCleanupService } from './services/cleanup.service';
-import { startMentalReportService, stopMentalReportService } from './services/mentalAlert.service';
+import { startRecurringReminderService, stopRecurringReminderService } from './services/recurringReminder.service';
 import prisma from './db';
 
 const server = http.createServer(app);
@@ -15,8 +15,8 @@ server.listen(config.port, () => {
   startFeishuClient();
   startReminderService();
   startDigestService();
+  startRecurringReminderService();
   startCleanupService();
-  startMentalReportService();
 });
 
 // 优雅关闭：收到终止信号时依次停掉后台服务并断开数据库连接
@@ -27,8 +27,8 @@ async function shutdown(signal: string) {
   console.log(`\n[关闭] 收到 ${signal}，开始优雅关闭...`);
   stopReminderService();
   stopDigestService();
+  stopRecurringReminderService();
   stopCleanupService();
-  stopMentalReportService();
   stopFeishuClient();
   server.close(() => {
     console.log('[关闭] HTTP 服务已关闭');

@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage';
 import CalendarPage from './pages/CalendarPage';
 import SettingsPage from './pages/SettingsPage';
 import InspirationPage from './pages/InspirationPage';
+import RecurringPage from './pages/RecurringPage';
 import StudentsPage from './pages/StudentsPage';
 import MentalPage from './pages/MentalPage';
 import CounselingPage from './pages/CounselingPage';
@@ -38,6 +39,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/notices': '通知看板',
   '/exports': '导出中心',
   '/inspiration': '灵感',
+  '/recurring': '周期任务',
   '/help': '使用指南',
   '/settings': '设置',
 };
@@ -78,6 +80,7 @@ export default function App() {
             <Route path="/notices" element={<NoticesPage />} />
             <Route path="/exports" element={<ExportsPage />} />
             <Route path="/inspiration" element={<InspirationPage />} />
+            <Route path="/recurring" element={<RecurringPage />} />
             <Route path="/help" element={<HelpPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>

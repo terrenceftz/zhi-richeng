@@ -17,6 +17,7 @@ import mentalRoutes from './routes/mental.routes';
 import statsRoutes from './routes/stats.routes';
 import bingRoutes from './routes/bing.routes';
 import auditRoutes from './routes/audit.routes';
+import recurringRoutes from './routes/recurring.routes';
 import helmet from 'helmet';
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/api/mental', mentalRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/bing-wallpaper', bingRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/recurring', recurringRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 

@@ -57,6 +57,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       semesterStart: settings.semester_start || '',
       semesterEnd: settings.semester_end || '',
       mentalReportCollege: settings.mental_report_college || '',
+      mentalReportDay: parseInt(settings.mental_report_day || '15'),
+      mentalReportEnabled: settings.mental_report_enabled !== 'false',
+      mentalReportSkipMonths: settings.mental_report_skip_months || '1,2,7,8',
     });
   } catch (err) {
     next(err);
@@ -65,7 +68,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, digestEnabled, digestHour, digestAi, regEnabled, semesterName, semesterStart, semesterEnd, mentalReportCollege } = req.body;
+    const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, digestEnabled, digestHour, digestAi, regEnabled, semesterName, semesterStart, semesterEnd, mentalReportCollege, mentalReportDay, mentalReportEnabled, mentalReportSkipMonths } = req.body;
 
     // 系统级字段（影响全局）必须管理员：飞书凭证、注册开关、学期、DeepSeek Key、报送学院
     const systemFields = ['feishuAppId', 'feishuAppSecret', 'regEnabled', 'semesterName', 'semesterStart', 'semesterEnd', 'deepseekApiKey', 'mentalReportCollege'];
@@ -123,6 +126,17 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
     }
     if (mentalReportCollege !== undefined) {
       await settingsService.setSetting('mental_report_college', String(mentalReportCollege));
+    }
+    if (mentalReportDay !== undefined) {
+      await settingsService.setSetting('mental_report_day', String(Math.max(1, Math.min(28, parseInt(String(mentalReportDay), 10) || 15))));
+    }
+    if (mentalReportEnabled !== undefined) {
+      await settingsService.setSetting('mental_report_enabled', String(mentalReportEnabled));
+    }
+    if (mentalReportSkipMonths !== undefined) {
+      // 校验并规范化：仅保留 1-12 的有效月份
+      const nums = String(mentalReportSkipMonths).split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => n >= 1 && n <= 12);
+      await settingsService.setSetting('mental_report_skip_months', nums.length > 0 ? [...new Set(nums)].join(',') : '');
     }
     await audit.log(req.userId!, 'settings_update', { ip: req.ip });
     const settings = await settingsService.getAllSettings();
