@@ -3,12 +3,16 @@ import { Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ThemeToggle from '../ui/ThemeToggle';
 import { fetchWallpaper, type BingWallpaper } from '../../api/wallpaper';
+import { useThemeStore } from '../../stores/themeStore';
 
 export default function AuthLayout() {
   const [wallpaper, setWallpaper] = useState<BingWallpaper | null>(null);
+  const palette = useThemeStore((s) => s.palette);
+  const isKirby = palette === 'kirby';
 
-  // 拉取必应每日壁纸；失败时保持品牌渐变兜底
+  // 拉取必应每日壁纸；卡比主题使用专属背景，无需拉取
   useEffect(() => {
+    if (isKirby) return;
     let alive = true;
     fetchWallpaper().then((w) => {
       if (alive) setWallpaper(w);
@@ -16,18 +20,27 @@ export default function AuthLayout() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [isKirby]);
 
   return (
     <div className="relative flex min-h-screen overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      {/* 必应每日壁纸背景 */}
-      {wallpaper && (
+      {/* 背景：卡比主题用专属图，其他主题用必应每日壁纸 */}
+      {isKirby ? (
         <img
-          src={wallpaper.url}
+          src="/themes/kirby/login.jpg"
           alt=""
           aria-hidden
           className="absolute inset-0 h-full w-full object-cover"
         />
+      ) : (
+        wallpaper && (
+          <img
+            src={wallpaper.url}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )
       )}
 
       {/* 品牌渐变遮罩：保证文字可读，深色模式更深 */}

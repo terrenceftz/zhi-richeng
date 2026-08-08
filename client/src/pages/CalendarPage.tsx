@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { useTaskStore } from '../stores/taskStore';
+import { useThemeStore } from '../stores/themeStore';
 import type { Task } from '../types';
 import DayView from '../components/calendar/DayView';
 import WeekView from '../components/calendar/WeekView';
@@ -11,6 +12,7 @@ type ViewMode = 'day' | 'week' | 'month';
 
 export default function CalendarPage() {
   const { tasks, selectedDate, setSelectedDate, fetchTasks } = useTaskStore();
+  const isKirby = useThemeStore((s) => s.palette === 'kirby');
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -39,7 +41,17 @@ export default function CalendarPage() {
   ];
 
   return (
-    <div>
+    <div className="relative">
+      {/* 卡比主题专属日历装饰背景 */}
+      {isKirby && (
+        <img
+          src="/themes/kirby/calendar.jpg"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.08]"
+        />
+      )}
+      <div className="relative">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
           <CalendarDays className="h-6 w-6 text-brand-500" />
@@ -78,6 +90,7 @@ export default function CalendarPage() {
       </div>
 
       <TaskDetailDrawer task={selectedTask} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      </div>
     </div>
   );
 }

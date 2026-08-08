@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
 import { LayoutDashboard, Calendar, Lightbulb, Settings, LogOut, GraduationCap, Bell, Heart, BarChart3, HeartHandshake, FileSpreadsheet, BookOpenText, ShieldCheck, Building2 } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import Badge from '../ui/Badge';
@@ -20,6 +21,7 @@ const navItems = [
 export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const isKirby = useThemeStore((s) => s.palette === 'kirby');
 
   const handleLogout = async () => {
     await logout();
@@ -30,11 +32,15 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <aside className="flex h-full w-full flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       {/* 品牌 */}
       <div className="flex items-center gap-3 px-5 py-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm">
-          <span className="text-lg font-bold">智</span>
-        </div>
+        {isKirby ? (
+          <img src="/themes/kirby/icon.png" alt="卡比" className="h-11 w-11 rounded-xl object-cover shadow-sm" />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm">
+            <span className="text-lg font-bold">智</span>
+          </div>
+        )}
         <div className="min-w-0">
-          <h1 className="truncate text-base font-semibold text-slate-900 dark:text-slate-100">智日程</h1>
+          <h1 className="truncate text-base font-semibold text-slate-900 dark:text-slate-100">{isKirby ? '卡比工作台' : '智日程'}</h1>
           <p className="truncate text-xs text-slate-500 dark:text-slate-400">辅导员智能工作台</p>
         </div>
       </div>
