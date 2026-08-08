@@ -125,11 +125,11 @@ function buildCreateData(ctx: UserCtx, input: StudentInput) {
   };
 }
 
-/** 白名单更新字段映射（禁止改写 userId / createdAt / isMentalTarget / college 归属） */
+/** 白名单更新字段映射（禁止改写 userId / createdAt / isMentalTarget / college 归属除外——学院作为基本字段可编辑） */
 function buildUpdateData(input: Partial<StudentInput>): any {
   const allowed: (keyof StudentInput)[] = [
     'name', 'studentNo', 'className', 'gender', 'birthDate', 'studentType',
-    'idNumber', 'grade', 'hometown', 'phone', 'dormitory', 'address', 'tags', 'remark', 'extras',
+    'idNumber', 'grade', 'hometown', 'phone', 'dormitory', 'address', 'tags', 'remark', 'extras', 'college',
   ];
   const data: any = {};
   for (const k of allowed) {
@@ -216,20 +216,6 @@ export async function setStudentStatus(ctx: UserCtx, id: string, status: string)
     detail: `学生状态变更：${existing.name} ${existing.studentStatus} → ${status}`,
   });
   return parseTags(updated);
-}
-
-/**
- * 批量设置学院：把当前用户可见范围内的学生统一归入指定学院（管理员/院系管理员用）。
- * 用于历史数据补归属——学生没有学院标签时同学院辅导员无法共享看到。
- */
-export async function batchSetCollege(ctx: UserCtx, college: string): Promise<number> {
-  const scope = visibleStudentWhere(ctx);
-  const clean = String(college || '').trim().slice(0, 100);
-  const result = await prisma.student.updateMany({ where: scope, data: { college: clean } });
-  await audit.log(ctx.userId!, 'student_update', {
-    detail: `批量设置学院「${clean || '（清空）'}」：影响 ${result.count} 名学生`,
-  });
-  return result.count;
 }
 
 export interface UpsertResult {
@@ -321,6 +307,7 @@ export const PRESET_STUDENT_FIELDS: StudentField[] = [
 export const BUILTIN_STUDENT_FIELDS: StudentField[] = [
   { key: 'name', label: '姓名', type: 'text' },
   { key: 'studentNo', label: '学号', type: 'text' },
+  { key: 'college', label: '学院', type: 'text' },
   { key: 'studentStatus', label: '学生状态', type: 'select', options: ['在学', '休学', '不在籍'] },
   { key: 'className', label: '班级', type: 'text' },
   { key: 'gender', label: '性别', type: 'select', options: ['男', '女'] },

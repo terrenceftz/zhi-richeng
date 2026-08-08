@@ -171,21 +171,6 @@ export default function StudentsPage() {
     }
   };
 
-  const handleBatchCollege = async () => {
-    const college = window.prompt('输入要批量设置的学院名称（应用到当前可见学生，留空则清空学院）：', user?.college || '');
-    if (college === null) return;
-    const target = college.trim();
-    if (!window.confirm(`确定将当前可见的 ${total} 名学生设置为学院「${target || '（清空）'}」？`)) return;
-    try {
-      const res = await studentsApi.batchSetCollege(target);
-      toast.success(res.message);
-      load(1);
-    } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '设置失败';
-      toast.error(msg);
-    }
-  };
-
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -215,14 +200,9 @@ export default function StudentsPage() {
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           {canManageFields && (
-            <>
-              <Button variant="secondary" onClick={() => setFieldOpen(true)}>
-                <SlidersHorizontal className="h-4 w-4" /> 字段管理
-              </Button>
-              <Button variant="secondary" onClick={handleBatchCollege}>
-                <SlidersHorizontal className="h-4 w-4" /> 批量设置学院
-              </Button>
-            </>
+            <Button variant="secondary" onClick={() => setFieldOpen(true)}>
+              <SlidersHorizontal className="h-4 w-4" /> 字段管理
+            </Button>
           )}
           <Button variant="secondary" onClick={() => downloadTemplate(extraFields)}>
             <Download className="h-4 w-4" /> 下载模板
@@ -405,7 +385,7 @@ export default function StudentsPage() {
 
       {/* 添加/编辑抽屉 */}
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={editing ? '编辑学生' : '添加学生'} width="max-w-lg">
-        <StudentForm key={editing?.id || 'create'} initial={editing || undefined} fields={extraFields} onSubmit={handleSave} onCancel={() => setDrawerOpen(false)} />
+        <StudentForm key={editing?.id || 'create'} initial={editing || undefined} fields={extraFields} defaultCollege={user?.college} onSubmit={handleSave} onCancel={() => setDrawerOpen(false)} />
       </Drawer>
 
       {/* 详情 + 谈心/台账 */}
@@ -444,9 +424,10 @@ export default function StudentsPage() {
   );
 }
 
-function StudentForm({ initial, fields, onSubmit, onCancel }: { initial?: Student; fields: StudentField[]; onSubmit: (d: Partial<Student>) => Promise<void>; onCancel: () => void }) {
+function StudentForm({ initial, fields, defaultCollege, onSubmit, onCancel }: { initial?: Student; fields: StudentField[]; defaultCollege?: string; onSubmit: (d: Partial<Student>) => Promise<void>; onCancel: () => void }) {
   const [name, setName] = useState(initial?.name || '');
   const [studentNo, setStudentNo] = useState(initial?.studentNo || '');
+  const [college, setCollege] = useState(initial?.college || defaultCollege || '');
   const [gender, setGender] = useState(initial?.gender || '');
   const [birthDate, setBirthDate] = useState(initial?.birthDate?.slice(0, 10) || '');
   const [studentType, setStudentType] = useState(initial?.studentType || '');
@@ -467,7 +448,7 @@ function StudentForm({ initial, fields, onSubmit, onCancel }: { initial?: Studen
       if (v != null && v !== '') cleanExtras[k] = v;
     });
     await onSubmit({
-      name, studentNo, gender, birthDate: birthDate || undefined, studentType: studentType || undefined,
+      name, studentNo, college, gender, birthDate: birthDate || undefined, studentType: studentType || undefined,
       idNumber, grade, className, hometown, phone, dormitory, address, remark,
       extras: Object.keys(cleanExtras).length > 0 ? cleanExtras : undefined,
     });
@@ -478,6 +459,7 @@ function StudentForm({ initial, fields, onSubmit, onCancel }: { initial?: Studen
       <div className="grid grid-cols-2 gap-3">
         <Input label="姓名" id="sName" value={name} onChange={(e) => setName(e.target.value)} required />
         <Input label="学号" id="sNo" value={studentNo} onChange={(e) => setStudentNo(e.target.value)} />
+        <Input label="学院" id="sCollege" value={college} onChange={(e) => setCollege(e.target.value)} placeholder="如：法学院" hint="同学院辅导员共享该学生数据" />
         <Select label="性别" id="sGender" value={gender} onChange={(e) => setGender(e.target.value)}>
           <option value="">未填写</option>
           <option value="男">男</option>
@@ -584,6 +566,7 @@ function StudentDetail({ student, fields, onToggleMental, onMentalChanged, onPro
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <Info label="学号" value={student.studentNo} />
+            <Info label="学院" value={student.college} />
             <Info label="学生状态" value={student.studentStatus ? STUDENT_STATUS_LABELS[student.studentStatus as keyof typeof STUDENT_STATUS_LABELS] || student.studentStatus : undefined} />
             <Info label="性别" value={student.gender} />
             <Info label="出生日期" value={student.birthDate?.slice(0, 10)} />
