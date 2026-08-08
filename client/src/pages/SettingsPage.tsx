@@ -16,6 +16,7 @@ import BackupCard from '../components/settings/BackupCard';
 import AboutCard from '../components/settings/AboutCard';
 import UsersCard from '../components/settings/UsersCard';
 import AuditLogCard from '../components/settings/AuditLogCard';
+import ThemeCard from '../components/settings/ThemeCard';
 
 interface SettingsData {
   hasDeepSeekKey: boolean;
@@ -90,6 +91,7 @@ export default function SettingsPage() {
 
       {/* 全部设置卡共用一个 2 列网格：grid 自动按行成对填充，每行严格等高对齐 */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <ThemeCard />
         <DeepSeekCard
           hasKey={data.hasDeepSeekKey}
           envConfigured={data.envConfigured}
