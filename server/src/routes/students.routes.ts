@@ -96,6 +96,7 @@ router.get('/export/excel', async (req: Request, res: Response, next: NextFuncti
       const row: Record<string, any> = {
         姓名: s.name,
         学号: s.studentNo || '',
+        学院: s.college || '',
         性别: s.gender || '',
         出生日期: s.birthDate ? new Date(s.birthDate).toISOString().slice(0, 10) : '',
         学生类型: s.studentType === 'overseas' ? '境外生' : s.studentType === 'domestic' ? '境内生' : '',
@@ -118,7 +119,7 @@ router.get('/export/excel', async (req: Request, res: Response, next: NextFuncti
     });
     const ws = XLSX.utils.json_to_sheet(rows);
     const cols = [
-      { wch: 10 }, { wch: 14 }, { wch: 6 }, { wch: 12 }, { wch: 8 },
+      { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 6 }, { wch: 12 }, { wch: 8 },
       { wch: 22 }, { wch: 8 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
       { wch: 12 }, { wch: 24 }, { wch: 8 }, { wch: 8 }, { wch: 20 },
       ...extraFields.map(() => ({ wch: 12 })),

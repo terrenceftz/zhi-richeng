@@ -5,6 +5,7 @@ import type { StudentField } from '../types';
 const HEADER_MAP: Record<string, string> = {
   姓名: 'name', name: 'name',
   学号: 'studentNo', 'student no': 'studentNo', studentno: 'studentNo',
+  学院: 'college', college: 'college',
   性别: 'gender', gender: 'gender',
   出生日期: 'birthDate', 'birth date': 'birthDate', birthday: 'birthDate',
   学生类型: 'studentType', 'student type': 'studentType', studenttype: 'studentType',
@@ -50,6 +51,7 @@ function normalizeDate(raw: unknown): string | undefined {
 export interface ParsedStudent {
   name: string;
   studentNo?: string;
+  college?: string;
   className?: string;
   gender?: string;
   birthDate?: string;
@@ -97,6 +99,7 @@ function mapRow(row: Record<string, unknown>, fields: StudentField[]): ParsedStu
   return {
     name,
     studentNo: out.studentNo,
+    college: out.college,
     className: out.className,
     gender,
     birthDate,
@@ -125,12 +128,12 @@ export async function parseExcelFile(file: File, fields: StudentField[] = []): P
 /** 下载学生导入 Excel 模板（列跟随字段配置） */
 export function downloadTemplate(fields: StudentField[] = []): void {
   const headers = [
-    '姓名', '学号', '性别', '出生日期', '学生类型', '证件号码', '年级', '班级', '籍贯', '手机', '宿舍', '家庭住址', '备注',
+    '姓名', '学号', '学院', '性别', '出生日期', '学生类型', '证件号码', '年级', '班级', '籍贯', '手机', '宿舍', '家庭住址', '备注',
     ...fields.map((f) => f.label),
   ];
   const sample = [
-    ['张三', '20240001', '男', '2005-03-15', '境内生', '110101200503151234', '2024级', '计科1班', '福建泉州', '13800000001', '梅苑1-101', '福建省泉州市XX路', '', ...fields.map(() => '')],
-    ['李四', '20240002', '女', '2005-07-20', '境外生', 'P12345678', '2024级', '计科1班', '香港', '13800000002', '梅苑1-102', '香港特别行政区', '', ...fields.map(() => '')],
+    ['张三', '20240001', '法学院', '男', '2005-03-15', '境内生', '110101200503151234', '2024级', '计科1班', '福建泉州', '13800000001', '梅苑1-101', '福建省泉州市XX路', '', ...fields.map(() => '')],
+    ['李四', '20240002', '法学院', '女', '2005-07-20', '境外生', 'P12345678', '2024级', '计科1班', '香港', '13800000002', '梅苑1-102', '香港特别行政区', '', ...fields.map(() => '')],
   ];
   const aoa = [headers, ...sample];
   const ws = XLSX.utils.aoa_to_sheet(aoa);
