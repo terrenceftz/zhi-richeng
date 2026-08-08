@@ -107,6 +107,7 @@ router.get('/export/excel', async (req: Request, res: Response, next: NextFuncti
         手机: s.phone || '',
         宿舍: s.dormitory || '',
         家庭住址: s.address || '',
+        学生状态: s.studentStatus === 'suspended' ? '休学' : s.studentStatus === 'inactive' ? '不在籍' : '在学',
         心理台账: s.isMentalTarget ? '是' : '否',
         关注级别: p ? (p.concernLevel || 1) : '',
         备注: s.remark || '',
@@ -121,7 +122,7 @@ router.get('/export/excel', async (req: Request, res: Response, next: NextFuncti
     const cols = [
       { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 6 }, { wch: 12 }, { wch: 8 },
       { wch: 22 }, { wch: 8 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
-      { wch: 12 }, { wch: 24 }, { wch: 8 }, { wch: 8 }, { wch: 20 },
+      { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 20 },
       ...extraFields.map(() => ({ wch: 12 })),
     ];
     ws['!cols'] = cols;

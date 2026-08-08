@@ -97,10 +97,13 @@ export default function StudentsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 搜索/筛选变化时回到第 1 页
+  // 搜索/筛选变化时回到第 1 页（搜索词防抖 300ms，避免每键请求）
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(1);
+    const timer = setTimeout(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      load(1);
+    }, 300);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, className, grade, mentalOnly, statusFilter]);
 

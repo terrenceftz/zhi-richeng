@@ -26,7 +26,7 @@ router.put('/me', async (req: Request, res: Response, next: NextFunction) => {
     const { name, password, oldPassword } = req.body;
     // 修改密码必须提供当前密码，防止 access token 被盗后直接改密锁定账号
     if (password) {
-      if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ message: '密码长度至少6位' });
+      if (typeof password !== 'string' || password.length < 8) return res.status(400).json({ message: '密码长度至少8位' });
       if (!oldPassword || typeof oldPassword !== 'string') {
         return res.status(400).json({ message: '修改密码需提供原密码' });
       }
@@ -73,8 +73,8 @@ router.post('/', requireAdmin, async (req: Request, res: Response, next: NextFun
     if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ message: '邮箱格式不正确' });
     }
-    if (!password || typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({ message: '密码长度至少 6 位' });
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ message: '密码长度至少 8 位' });
     }
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ message: '缺少姓名' });

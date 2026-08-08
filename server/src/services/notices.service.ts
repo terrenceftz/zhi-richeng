@@ -67,6 +67,9 @@ export async function updateNotice(userId: string, id: string, input: Partial<No
   for (const k of allowed) {
     if (input[k] !== undefined) data[k] = input[k];
   }
+  if (data.status !== undefined && !['pending', 'in_progress', 'done'].includes(data.status)) {
+    throw Object.assign(new Error('无效的通知状态'), { statusCode: 400 });
+  }
   if (data.materials !== undefined) data.materials = JSON.stringify(data.materials);
   if (data.deadline !== undefined) {
     const parsed = data.deadline ? new Date(data.deadline) : null;

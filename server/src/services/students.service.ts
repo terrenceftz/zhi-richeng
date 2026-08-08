@@ -237,38 +237,53 @@ export async function upsertStudents(ctx: UserCtx, inputs: StudentInput[]): Prom
   const scope = visibleStudentWhere(ctx);
   const result: UpsertResult = { created: 0, updated: 0 };
 
+  // 文件内按学号/证件号去重（同一文件重复只处理首条，后续跳过避免重复建行）
+  const seen = new Set<string>();
+  const uniqueInputs: StudentInput[] = [];
   for (const input of inputs) {
-    const matchNo = String(input.studentNo || '').trim();
-    const matchId = String(input.idNumber || '').trim();
-
-    let existing: { id: string } | null = null;
-    if (matchNo || matchId) {
-      const where: any = { ...scope };
-      if (matchNo && matchId) {
-        where.OR = [{ studentNo: matchNo }, { idNumber: matchId }];
-      } else if (matchNo) {
-        where.studentNo = matchNo;
-      } else {
-        where.idNumber = matchId;
-      }
-      existing = await prisma.student.findFirst({ where, select: { id: true } });
-    }
-
-    if (existing) {
-      const data = buildUpdateData(input);
-      if (!isAdmin(ctx.role)) delete data.college; // 普通用户导入不得改学院归属
-      await prisma.student.update({ where: { id: existing.id }, data });
-      result.updated++;
-    } else {
-      await prisma.student.create({ data: buildCreateData(ctx, input) });
-      result.created++;
-    }
+    const no = String(input.studentNo || '').trim();
+    const id = String(input.idNumber || '').trim();
+    const key = no ? `no:${no}` : id ? `id:${id}` : `name:${input.name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniqueInputs.push(input);
   }
+
+  // 整体事务：中途失败回滚，避免半导入状态
+  await prisma.$transaction(async (tx) => {
+    for (const input of uniqueInputs) {
+      const matchNo = String(input.studentNo || '').trim();
+      const matchId = String(input.idNumber || '').trim();
+
+      let existing: { id: string } | null = null;
+      if (matchNo || matchId) {
+        const where: any = { ...scope };
+        if (matchNo && matchId) {
+          where.OR = [{ studentNo: matchNo }, { idNumber: matchId }];
+        } else if (matchNo) {
+          where.studentNo = matchNo;
+        } else {
+          where.idNumber = matchId;
+        }
+        existing = await tx.student.findFirst({ where, select: { id: true } });
+      }
+
+      if (existing) {
+        const data = buildUpdateData(input);
+        if (!isAdmin(ctx.role)) delete data.college; // 普通用户导入不得改学院归属
+        await tx.student.update({ where: { id: existing.id }, data });
+        result.updated++;
+      } else {
+        await tx.student.create({ data: buildCreateData(ctx, input) });
+        result.created++;
+      }
+    }
+  });
 
   if (inputs.length > 0) {
     await audit.log(ctx.userId!, 'student_import', {
       entityType: 'student',
-      detail: `导入学生：新建 ${result.created} 人，更新 ${result.updated} 人`,
+      detail: `导入学生：新建 ${result.created} 人，更新 ${result.updated} 人（文件内去重跳过 ${inputs.length - uniqueInputs.length} 条）`,
     });
   }
   return result;

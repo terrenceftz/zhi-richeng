@@ -94,8 +94,9 @@ export async function getOverdueTasks(userId: string) {
       due.setHours(h || 0, m || 0, 0, 0);
       return now > due;
     }
-    due.setDate(due.getDate() + 1);
-    return now > due;
+    // 无 dueTime：次日本地 0 点起逾期（用本地日期组件构造，避免 UTC 偏移 8 小时）
+    const nextLocalMidnight = new Date(due.getFullYear(), due.getMonth(), due.getDate() + 1);
+    return now > nextLocalMidnight;
   });
   return parseTagsList(overdue);
 }

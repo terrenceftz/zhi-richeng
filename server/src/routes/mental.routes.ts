@@ -264,6 +264,7 @@ router.post('/import', async (req: Request, res: Response, next: NextFunction) =
 
     let updated = 0;
     let notFound: string[] = [];
+    let skippedInactive: string[] = [];
 
     for (const row of list.slice(0, 500)) {
       // 兼容数字学号（Excel 单元格可能存成数字 2217111050）
@@ -276,6 +277,11 @@ router.post('/import', async (req: Request, res: Response, next: NextFunction) =
       });
       if (!student) {
         notFound.push(studentNo);
+        continue;
+      }
+      // 休学/不在籍学生跳过（不可进行台账操作），不中断整批导入
+      if (student.studentStatus && student.studentStatus !== 'active') {
+        skippedInactive.push(studentNo);
         continue;
       }
 
@@ -307,7 +313,8 @@ router.post('/import', async (req: Request, res: Response, next: NextFunction) =
       return res.status(400).json({ message: reason });
     }
 
-    res.json({ updated, notFound: notFound.slice(0, 20), message: `已更新 ${updated} 名台账学生${notFound.length > 0 ? `，${notFound.length} 名未匹配（学号不存在）` : ''}` });
+    const skipMsg = skippedInactive.length > 0 ? `，跳过 ${skippedInactive.length} 名休学/不在籍学生` : '';
+    res.json({ updated, notFound: notFound.slice(0, 20), skippedInactive: skippedInactive.slice(0, 20), message: `已更新 ${updated} 名台账学生${notFound.length > 0 ? `，${notFound.length} 名未匹配（学号不存在）` : ''}${skipMsg}` });
   } catch (err) {
     next(err);
   }

@@ -32,8 +32,9 @@ export async function getOverview(ctx: UserCtx) {
       due.setHours(h || 0, m || 0, 0, 0);
       return now > due;
     }
-    due.setDate(due.getDate() + 1);
-    return now > due;
+    // 无 dueTime：次日本地 0 点起逾期
+    const nextLocalMidnight = new Date(due.getFullYear(), due.getMonth(), due.getDate() + 1);
+    return now > nextLocalMidnight;
   }).length;
 
   const studentWhere = visibleStudentWhere(ctx);

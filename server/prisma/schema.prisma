@@ -53,6 +53,7 @@ model Task {
   @@index([dueDate])
   @@index([parentId])
   @@index([status])
+  @@index([status, dueDate])
 }
 
 model RefreshToken {
@@ -119,6 +120,10 @@ model Student {
   @@index([userId, grade])
   @@index([userId, studentType])
   @@index([userId, isMentalTarget])
+  @@index([college])
+  @@index([studentNo])
+  @@index([idNumber])
+  @@index([studentStatus])
 }
 
 /// 心理台账记录
@@ -181,6 +186,7 @@ model Counseling {
 
   @@index([userId])
   @@index([studentId])
+  @@index([studentId, date])
 }
 
 /// 通知 / 材料上报
@@ -226,6 +232,7 @@ model AuditLog {
 
   @@index([userId, createdAt])
   @@index([action])
+  @@index([entityType, entityId])
 }
 
 /// 周期性任务提醒：每天/每周/每月定时推送（内置心理台账报送）
@@ -244,4 +251,5 @@ model RecurringReminder {
   updatedAt   DateTime @updatedAt
 
   @@index([enabled])
+  @@index([enabled, cycleType])
 }

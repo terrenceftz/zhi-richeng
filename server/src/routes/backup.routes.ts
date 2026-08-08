@@ -35,6 +35,8 @@ router.get('/', requireAdmin, async (_req: Request, res: Response, next: NextFun
     if (!fs.existsSync(DB_PATH)) {
       return res.status(404).json({ message: '数据库文件不存在' });
     }
+    // 先做 WAL checkpoint，尽量把未落盘的写合并到主库，降低热备不一致风险
+    await prisma.$queryRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE)').catch(() => {});
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const filename = `zhi-richeng-backup-${timestamp}.db`;
     await audit.log(_req.userId!, 'backup_download', { ip: _req.ip });

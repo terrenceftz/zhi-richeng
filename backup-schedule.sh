@@ -4,10 +4,11 @@
 
 set -e
 
-# 配置
-PROJECT_DIR="/root/.openclaw/workspace/agent-e7b30f31/zhi-richeng"
+# 配置（自动基于脚本所在目录推导，适配任意部署路径）
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="${SCRIPT_DIR}"
 BACKUP_DIR="${PROJECT_DIR}/backups"
-DB_FILE="${PROJECT_DIR}/server/prisma/data/dev.db"
+DB_FILE="${PROJECT_DIR}/server/prisma/dev.db"
 ENV_FILE="${PROJECT_DIR}/server/.env"
 PRISMA_SCHEMA="${PROJECT_DIR}/server/prisma/schema.prisma"
 LOG_FILE="${BACKUP_DIR}/backup.log"
@@ -35,28 +36,21 @@ backup_database() {
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 警告: 数据库文件不存在: ${DB_FILE}" >> "${LOG_FILE}"
     fi
     
-    # 2. 备份配置文件
-    if [ -f "${ENV_FILE}" ]; then
-        cp "${ENV_FILE}" "${backup_path}.env"
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 环境配置备份完成: ${backup_path}.env" >> "${LOG_FILE}"
-    fi
-    
-    # 3. 备份Prisma schema
+    # 2. 备份配置文件（不备份 .env：内含 JWT/DeepSeek/飞书密钥，密钥应独立管理）
     if [ -f "${PRISMA_SCHEMA}" ]; then
         cp "${PRISMA_SCHEMA}" "${backup_path}.prisma"
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Prisma schema备份完成: ${backup_path}.prisma" >> "${LOG_FILE}"
     fi
     
-    # 4. 创建压缩包
+    # 3. 创建压缩包（含数据库与 schema，不含 .env 密钥）
     cd "${BACKUP_DIR}"
     tar -czf "${backup_name}.tar.gz" \
         "${backup_name}.db" \
         "${backup_name}.sql" \
-        "${backup_name}.env" \
         "${backup_name}.prisma" 2>/dev/null || true
     
-    # 5. 清理临时文件
-    rm -f "${backup_path}.db" "${backup_path}.sql" "${backup_path}.env" "${backup_path}.prisma"
+    # 4. 清理临时文件
+    rm -f "${backup_path}.db" "${backup_path}.sql" "${backup_path}.prisma"
     
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 压缩包创建完成: ${backup_name}.tar.gz" >> "${LOG_FILE}"
     

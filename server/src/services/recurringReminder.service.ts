@@ -62,6 +62,12 @@ async function markSent(id: string, key: string): Promise<void> {
 
 /** 今天是否应触发（含补发：到点后当天/当月未发则补） */
 async function isDueToday(reminder: any, now: Date): Promise<boolean> {
+  // 配置的触发时间（HH:MM）：未到该时刻不触发；到点后当天未发则补发（去重键保证一次）
+  const timeReached = (): boolean => {
+    const [h, m] = String(reminder.time || '09:00').split(':').map(Number);
+    return now.getHours() * 60 + now.getMinutes() >= (h || 0) * 60 + (m || 0);
+  };
+
   if (reminder.contentType === 'mental_report') {
     if (!(await isReportEnabled())) return false;
     if ((await getSkipMonths()).includes(now.getMonth() + 1)) return false;
@@ -71,17 +77,17 @@ async function isDueToday(reminder: any, now: Date): Promise<boolean> {
 
   switch (reminder.cycleType) {
     case 'daily':
-      return true;
+      return timeReached();
     case 'weekly': {
       const wds = String(reminder.weekdays || '')
         .split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => n >= 0 && n <= 6);
       if (wds.length === 0) return false;
-      return wds.includes(now.getDay());
+      return wds.includes(now.getDay()) && timeReached();
     }
     case 'monthly': {
       const day = reminder.dayOfMonth;
       if (!day || day < 1 || day > 28) return false;
-      return now.getDate() >= day;
+      return now.getDate() >= day && timeReached();
     }
     default:
       return false;

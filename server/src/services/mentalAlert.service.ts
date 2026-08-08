@@ -85,7 +85,7 @@ export async function getRiskAlerts(ctx: UserCtx): Promise<any[]> {
     if (!p) continue;
     const level = p.concernLevel || 1;
     const last = s.mentalRecords[0];
-    const lastDate = last ? new Date(last.date) : new Date(p.includedAt || now);
+    const lastDate = last ? new Date(last.date) : new Date(p.includedAt || p.createdAt || now);
     const days = Math.floor((now.getTime() - lastDate.getTime()) / 86400000);
 
     const thresholds: Record<number, number> = { 1: 60, 2: 45, 3: 30 };

@@ -43,9 +43,12 @@ async function checkAndRemind(): Promise<void> {
     if (!reminderEnabled) return;
 
     const now = new Date();
+    // 时间窗：只看今天±1 天的任务，避免每分钟全表扫描
+    const windowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    const windowEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     const upcoming = await prisma.task.findMany({
       where: {
-        dueDate: { not: null },
+        dueDate: { not: null, gte: windowStart, lte: windowEnd },
         dueTime: { not: null },
         status: { not: 'done' },
       },
@@ -67,7 +70,8 @@ async function checkAndRemind(): Promise<void> {
       // 提醒窗口：在 [reminderMinutes - 2, reminderMinutes + 2] 分钟之间（容差避免轮询漏发）
       if (diffMin < reminderMinutes - 2 || diffMin > reminderMinutes + 2) continue;
 
-      const dedupeKey = `reminder_${reminderMinutes}`;
+      // 去重键绑定具体事件时间，参数调整不会导致重复提醒
+      const dedupeKey = `reminder_${eventTime.getTime()}`;
       if (await hasSent(task.id, dedupeKey)) continue;
 
       const openId = await settingsService.getSetting(`feishu_openid_${task.userId}`);
@@ -89,7 +93,7 @@ async function checkAndRemind(): Promise<void> {
     // 逾期即时提醒：任务刚过期（事件时间在过去 0~5 分钟内）时发一条
     const justOverdue = await prisma.task.findMany({
       where: {
-        dueDate: { not: null },
+        dueDate: { not: null, gte: windowStart, lte: windowEnd },
         dueTime: { not: null },
         status: { not: 'done' },
       },

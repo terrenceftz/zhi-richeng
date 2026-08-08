@@ -10,8 +10,8 @@ export async function register(req: Request, res: Response, next: NextFunction) 
     if (!email || !password || !name) {
       return res.status(400).json({ message: '缺少必填字段：email, password, name' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ message: '密码长度至少6位' });
+    if (password.length < 8) {
+      return res.status(400).json({ message: '密码长度至少8位' });
     }
 
     // 注册开关：默认关闭（与 seed 一致）；首个用户总是允许

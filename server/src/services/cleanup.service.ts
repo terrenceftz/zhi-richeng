@@ -21,6 +21,8 @@ async function dailyBackup(): Promise<void> {
     const dateKey = new Date().toISOString().slice(0, 10);
     const target = path.join(BACKUP_DIR, `auto-${dateKey}.db`);
     if (fs.existsSync(target)) return; // 今天已备份过
+    // 先做 WAL checkpoint 合并未落盘写入，降低热备不一致风险
+    await prisma.$queryRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE)').catch(() => {});
     fs.copyFileSync(DB_PATH, target);
     console.log(`[备份] 已自动备份数据库 → ${target}`);
 

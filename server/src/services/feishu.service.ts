@@ -104,13 +104,20 @@ export async function startFeishuClient(): Promise<void> {
       .register({
         'im.message.receive_v1': async (event: any) => {
           try {
-            console.log('[飞书] 收到消息事件:', JSON.stringify(event, null, 2).slice(0, 500));
+            // 只记录事件标识，不打印消息内容（隐私）
+            const ev = event?.event || {};
+            console.log('[飞书] 收到消息事件:', JSON.stringify({
+              messageId: ev.message?.message_id,
+              chatId: ev.message?.chat_id,
+              sender: ev.sender?.sender_id?.open_id,
+              type: ev.message?.message_type,
+            }));
 
             // Try multiple event structure paths
             const msg = event?.event?.message || event?.message;
             const from = event?.event?.sender || event?.sender;
             if (!msg || !from) {
-              console.log('[飞书] 事件结构不匹配，完整事件:', JSON.stringify(event));
+              console.log('[飞书] 事件结构不匹配（已脱敏）');
               return;
             }
 

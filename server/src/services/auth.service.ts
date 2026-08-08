@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import prisma from '../db';
 import { hashPassword, comparePassword } from '../utils/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt';
@@ -28,6 +29,11 @@ export interface TokenPair {
 
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
 
+/** refresh token 以 SHA-256 哈希落库，防止 DB 泄露后直接重放 */
+function hashRefreshToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
 function toPublicUser(user: { id: string; email: string; name: string; role: string; college?: string | null }): PublicUser {
   return { id: user.id, email: user.email, name: user.name, role: user.role, college: user.college || '' };
 }
@@ -54,8 +60,8 @@ export async function register(input: RegisterInput): Promise<{ user: PublicUser
   if (!input.name || typeof input.name !== 'string') {
     throw Object.assign(new Error('缺少姓名'), { statusCode: 400 });
   }
-  if (typeof input.password !== 'string' || input.password.length < 6) {
-    throw Object.assign(new Error('密码长度至少 6 位'), { statusCode: 400 });
+  if (typeof input.password !== 'string' || input.password.length < 8) {
+    throw Object.assign(new Error('密码长度至少 8 位'), { statusCode: 400 });
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -76,7 +82,7 @@ export async function register(input: RegisterInput): Promise<{ user: PublicUser
     await tx.refreshToken.create({
       data: {
         userId: created.id,
-        token: pair.refreshToken,
+        token: hashRefreshToken(pair.refreshToken),
         expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
       },
     });
@@ -101,7 +107,7 @@ export async function login(input: LoginInput): Promise<{ user: PublicUser; toke
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
-      token: tokens.refreshToken,
+      token: hashRefreshToken(tokens.refreshToken),
       expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
     },
   });
@@ -115,6 +121,7 @@ export async function login(input: LoginInput): Promise<{ user: PublicUser; toke
 /**
  * 原子化刷新令牌轮换：用事务 + deleteMany 计数判断，
  * 防止并发请求用同一个 refresh token 重复签发。
+ * refresh token 以 SHA-256 哈希入库，避免 DB 泄露后直接重放。
  */
 export async function refresh(refreshTokenValue: string): Promise<TokenPair> {
   let payload: TokenPayload;
@@ -124,9 +131,10 @@ export async function refresh(refreshTokenValue: string): Promise<TokenPair> {
     throw Object.assign(new Error('无效的 refresh token'), { statusCode: 401 });
   }
 
+  const hashed = hashRefreshToken(refreshTokenValue);
   const result = await prisma.$transaction(async (tx) => {
     const deleted = await tx.refreshToken.deleteMany({
-      where: { token: refreshTokenValue, expiresAt: { gt: new Date() } },
+      where: { token: hashed, expiresAt: { gt: new Date() } },
     });
     if (deleted.count === 0) {
       // token 不存在、已过期，或已被其它并发请求消费
@@ -136,7 +144,7 @@ export async function refresh(refreshTokenValue: string): Promise<TokenPair> {
     await tx.refreshToken.create({
       data: {
         userId: payload.userId,
-        token: newTokens.refreshToken,
+        token: hashRefreshToken(newTokens.refreshToken),
         expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
       },
     });
@@ -150,5 +158,5 @@ export async function refresh(refreshTokenValue: string): Promise<TokenPair> {
 }
 
 export async function logout(userId: string, refreshTokenValue: string): Promise<void> {
-  await prisma.refreshToken.deleteMany({ where: { userId, token: refreshTokenValue } });
+  await prisma.refreshToken.deleteMany({ where: { userId, token: hashRefreshToken(refreshTokenValue) } });
 }

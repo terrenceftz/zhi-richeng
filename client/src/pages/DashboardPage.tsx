@@ -72,9 +72,11 @@ export default function DashboardPage() {
       }
     }
     client.get('/settings').then(({ data }) => {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
-      if (data.semesterName && data.semesterStart) {
-        const config: SemesterConfig = { name: data.semesterName, start: data.semesterStart, end: data.semesterEnd || '' };
+      // 只缓存学期相关字段，避免把 imToken/OpenID 等凭据写入 localStorage
+      const semester = { name: data.semesterName || '', start: data.semesterStart || '', end: data.semesterEnd || '' };
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ data: semester, ts: Date.now() }));
+      if (semester.name && semester.start) {
+        const config: SemesterConfig = { name: semester.name, start: semester.start, end: semester.end };
         setTeachingWeek(getTeachingWeek(config));
         setBreakCountdown(getBreakCountdown(config));
       }

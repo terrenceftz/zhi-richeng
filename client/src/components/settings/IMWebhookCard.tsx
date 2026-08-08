@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import Card from './Card';
 import Button from '../ui/Button';
+import { Eye, EyeOff } from 'lucide-react';
 import { useToastStore } from '../../stores/toastStore';
 
 interface Props {
@@ -9,6 +11,7 @@ interface Props {
 
 export default function IMWebhookCard({ webhookUrl, imToken }: Props) {
   const toast = useToastStore();
+  const [showToken, setShowToken] = useState(false);
 
   const copy = async (text: string, label: string) => {
     try {
@@ -18,6 +21,8 @@ export default function IMWebhookCard({ webhookUrl, imToken }: Props) {
       toast.error('复制失败');
     }
   };
+
+  const masked = imToken ? `${imToken.slice(0, 6)}••••••••${imToken.slice(-4)}` : '';
 
   return (
     <Card title="IM 互联" subtitle="通过 Webhook 在聊天消息中直接添加待办事项">
@@ -30,9 +35,12 @@ export default function IMWebhookCard({ webhookUrl, imToken }: Props) {
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">Token</label>
+          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">Token（默认隐藏，点击眼睛查看）</label>
           <div className="flex items-center gap-2">
-            <code className="flex-1 break-all rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{imToken}</code>
+            <code className="flex-1 break-all rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{showToken ? imToken : masked}</code>
+            <Button size="sm" variant="secondary" onClick={() => setShowToken((v) => !v)} aria-label={showToken ? '隐藏 Token' : '显示 Token'}>
+              {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
             <Button size="sm" variant="secondary" onClick={() => copy(imToken, 'Token')}>复制</Button>
           </div>
         </div>
@@ -41,7 +49,7 @@ export default function IMWebhookCard({ webhookUrl, imToken }: Props) {
           <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{`POST /api/im/task
 Content-Type: application/json
 
-{ "text": "明天下午3点开会", "token": "${imToken}" }`}</pre>
+{ "text": "明天下午3点开会", "token": "${showToken ? imToken : masked}" }`}</pre>
         </div>
       </div>
     </Card>

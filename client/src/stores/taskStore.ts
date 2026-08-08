@@ -22,69 +22,77 @@ interface TaskState {
   clearError: () => void;
 }
 
-export const useTaskStore = create<TaskState>((set, get) => ({
-  tasks: [],
-  selectedDate: new Date().toISOString().slice(0, 10),
-  isLoading: false,
-  error: null,
+export const useTaskStore = create<TaskState>((set, get) => {
+  // 请求序号：丢弃过期响应，防止日历/首页并发拉取乱序覆盖
+  let fetchSeq = 0;
 
-  fetchTasks: async (filters) => {
-    set({ isLoading: true });
-    try {
-      const tasks = await tasksApi.fetchTasks(filters);
-      set({ tasks, isLoading: false });
-    } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '获取任务失败';
-      set({ isLoading: false, error: msg });
-    }
-  },
+  return {
+    tasks: [],
+    selectedDate: new Date().toISOString().slice(0, 10),
+    isLoading: false,
+    error: null,
 
-  createTask: async (input) => {
-    const task = await tasksApi.createTask(input);
-    set({ tasks: [...get().tasks, task] });
-    return task;
-  },
+    fetchTasks: async (filters) => {
+      const seq = ++fetchSeq;
+      set({ isLoading: true });
+      try {
+        const tasks = await tasksApi.fetchTasks(filters);
+        if (seq !== fetchSeq) return; // 已有更新的请求，丢弃本次结果
+        set({ tasks, isLoading: false });
+      } catch (err) {
+        if (seq !== fetchSeq) return;
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '获取任务失败';
+        set({ isLoading: false, error: msg });
+      }
+    },
 
-  updateTask: async (id, input) => {
-    const task = await tasksApi.updateTask(id, input);
-    set({ tasks: get().tasks.map((t) => (t.id === id ? task : t)) });
-    return task;
-  },
+    createTask: async (input) => {
+      const task = await tasksApi.createTask(input);
+      set({ tasks: [...get().tasks, task] });
+      return task;
+    },
 
-  deleteTask: async (id) => {
-    await tasksApi.deleteTask(id);
-    set({ tasks: get().tasks.filter((t) => t.id !== id) });
-  },
+    updateTask: async (id, input) => {
+      const task = await tasksApi.updateTask(id, input);
+      set({ tasks: get().tasks.map((t) => (t.id === id ? task : t)) });
+      return task;
+    },
 
-  updateStatus: async (id, status) => {
-    const task = await tasksApi.updateTaskStatus(id, status);
-    set({ tasks: get().tasks.map((t) => (t.id === id ? task : t)) });
-  },
+    deleteTask: async (id) => {
+      await tasksApi.deleteTask(id);
+      set({ tasks: get().tasks.filter((t) => t.id !== id) });
+    },
 
-  reorder: async (orderedIds) => {
-    const tasks = await tasksApi.reorderTasks(orderedIds);
-    set({ tasks });
-  },
+    updateStatus: async (id, status) => {
+      const task = await tasksApi.updateTaskStatus(id, status);
+      set({ tasks: get().tasks.map((t) => (t.id === id ? task : t)) });
+    },
 
-  parseNLP: async (text) => {
-    const r = await tasksApi.parseNLP(text);
-    return r.parsed;
-  },
+    reorder: async (orderedIds) => {
+      const tasks = await tasksApi.reorderTasks(orderedIds);
+      set({ tasks });
+    },
 
-  extractNLP: (text) => tasksApi.extractNLP(text),
+    parseNLP: async (text) => {
+      const r = await tasksApi.parseNLP(text);
+      return r.parsed;
+    },
 
-  confirmNLP: async (tasks) => {
-    set({ error: null });
-    try {
-      const result = await tasksApi.confirmNLP(tasks);
-      set({ tasks: [...get().tasks, ...result.tasks] });
-    } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存任务失败';
-      set({ error: msg });
-      throw err;
-    }
-  },
+    extractNLP: (text) => tasksApi.extractNLP(text),
 
-  setSelectedDate: (date) => set({ selectedDate: date }),
-  clearError: () => set({ error: null }),
-}));
+    confirmNLP: async (tasks) => {
+      set({ error: null });
+      try {
+        const result = await tasksApi.confirmNLP(tasks);
+        set({ tasks: [...get().tasks, ...result.tasks] });
+      } catch (err) {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存任务失败';
+        set({ error: msg });
+        throw err;
+      }
+    },
+
+    setSelectedDate: (date) => set({ selectedDate: date }),
+    clearError: () => set({ error: null }),
+  };
+});
