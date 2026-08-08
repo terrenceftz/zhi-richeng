@@ -8,6 +8,7 @@ import Card from './Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
+import { Select } from '../ui/Input';
 
 interface UserRow {
   id: string;
@@ -206,7 +207,8 @@ export default function UsersCard() {
                     <Save className="h-4 w-4" />
                   </button>
                 </div>
-                <select
+                <Select
+                  compact
                   value={u.role}
                   disabled={u.id === user?.id || changingId === u.id}
                   onChange={(e) => changeRole(u.id, e.target.value as UserRole)}
@@ -216,7 +218,7 @@ export default function UsersCard() {
                   {ROLE_OPTIONS.map((r) => (
                     <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
-                </select>
+                </Select>
                 {u.id !== user?.id && (
                   <button
                     onClick={() => deleteUser(u.id)}
@@ -254,11 +256,11 @@ export default function UsersCard() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">角色</label>
-              <select className={`${inputCls} w-full cursor-pointer px-3 py-2 text-sm`} value={createForm.role} onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as UserRole })}>
+              <Select value={createForm.role} onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as UserRole })}>
                 {ROLE_OPTIONS.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">所属学院</label>

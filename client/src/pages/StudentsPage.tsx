@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Plus, Search, Trash2, MessageSquarePlus, Upload, Download, Pencil, Heart, AlertCircle, SlidersHorizontal, X } from 'lucide-react';
+import { GraduationCap, Plus, Search, Trash2, MessageSquarePlus, Upload, Download, Pencil, Heart, AlertCircle, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
 import * as studentsApi from '../api/students';
 import * as counselingApi from '../api/counseling';
 import * as mentalApi from '../api/mental';
@@ -17,6 +17,7 @@ import Switch from '../components/ui/Switch';
 import { LoadingState, EmptyState } from '../components/ui/Feedback';
 import { useToastStore } from '../stores/toastStore';
 import { useAuthStore } from '../stores/authStore';
+import { useDropdown, DropdownPanel, type DropdownOption } from '../components/ui/Dropdown';
 import { parseExcelFile, downloadTemplate } from '../utils/studentImport';
 
 export default function StudentsPage() {
@@ -295,22 +296,7 @@ export default function StudentsPage() {
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-slate-600 dark:text-slate-300 md:px-4">{s.phone || '-'}</td>
                     <td className="whitespace-nowrap px-3 py-3 md:px-4">
-                      <select
-                        value={s.studentStatus || 'active'}
-                        onChange={(e) => handleStatusChange(s, e.target.value)}
-                        title="变更学生状态（休学/复学/毕业/退学）"
-                        className={`cursor-pointer rounded-full border px-2 py-0.5 text-xs font-medium transition-colors ${
-                          s.studentStatus === 'inactive'
-                            ? 'border-slate-300 bg-slate-100 text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                            : s.studentStatus === 'suspended'
-                              ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300'
-                              : 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300'
-                        }`}
-                      >
-                        <option value="active">在学</option>
-                        <option value="suspended">休学</option>
-                        <option value="inactive">不在籍</option>
-                      </select>
+                      <StatusSelect value={s.studentStatus || 'active'} onChange={(v) => handleStatusChange(s, v)} />
                     </td>
                     <td className="px-3 py-3 md:px-4">
                       <button onClick={() => handleToggleMental(s)} disabled={s.studentStatus !== 'active'} title={s.studentStatus !== 'active' ? '休学/不在籍学生不可标记台账' : undefined} className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${s.isMentalTarget ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'}`}>
@@ -1072,10 +1058,10 @@ function FieldManager({ fields, presets, builtins, onClose, onSaved }: {
         <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
           <p className="mb-1.5 text-sm font-medium text-slate-600 dark:text-slate-400">从常用字段添加</p>
           <div className="flex gap-2">
-            <select className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" value={presetKey} onChange={(e) => setPresetKey(e.target.value)}>
+            <Select className="flex-1" value={presetKey} onChange={(e) => setPresetKey(e.target.value)}>
               <option value="">选择字段...</option>
               {presets.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
-            </select>
+            </Select>
             <Button size="sm" variant="secondary" onClick={addPreset} disabled={!presetKey}>添加</Button>
           </div>
         </div>
@@ -1086,10 +1072,10 @@ function FieldManager({ fields, presets, builtins, onClose, onSaved }: {
           <div className="space-y-2">
             <input className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100" value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} placeholder="字段名称，如：家长工作单位" />
             <div className="flex gap-2">
-              <select className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" value={customType} onChange={(e) => setCustomType(e.target.value as 'text' | 'select')}>
+              <Select className="flex-1" value={customType} onChange={(e) => setCustomType(e.target.value as 'text' | 'select')}>
                 <option value="text">文本</option>
                 <option value="select">下拉选项</option>
-              </select>
+              </Select>
               {customType === 'select' && (
                 <input className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100" value={customOptions} onChange={(e) => setCustomOptions(e.target.value)} placeholder="选项用逗号分隔，如：本科,硕士" />
               )}
@@ -1106,5 +1092,40 @@ function FieldManager({ fields, presets, builtins, onClose, onSaved }: {
         </div>
       </div>
     </Modal>
+  );
+}
+
+/** 学生状态 pill 下拉（自定义弹层） */
+const STATUS_OPTIONS: DropdownOption[] = [
+  { value: 'active', label: '在学' },
+  { value: 'suspended', label: '休学' },
+  { value: 'inactive', label: '不在籍' },
+];
+
+function StatusSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { open, setOpen, ref } = useDropdown();
+  const status = value || 'active';
+  const pillCls =
+    status === 'inactive'
+      ? 'border-slate-300 bg-slate-100 text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400'
+      : status === 'suspended'
+        ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300'
+        : 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300';
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title="变更学生状态（休学/复学/毕业/退学）"
+        className={`inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium transition-colors ${pillCls}`}
+      >
+        {STUDENT_STATUS_LABELS[status as keyof typeof STUDENT_STATUS_LABELS] || status}
+        <ChevronDown className="h-3 w-3 opacity-70" />
+      </button>
+      {open && (
+        <DropdownPanel options={STATUS_OPTIONS} value={status} onSelect={onChange} onClose={() => setOpen(false)} align="right" />
+      )}
+    </div>
   );
 }

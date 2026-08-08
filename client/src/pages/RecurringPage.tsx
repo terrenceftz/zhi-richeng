@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import Switch from '../components/ui/Switch';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
+import { Select } from '../components/ui/Input';
 import { useToastStore } from '../stores/toastStore';
 
 interface RecurringReminder {
@@ -209,11 +210,11 @@ function ReminderForm({ item, onClose, onSaved }: { item: RecurringReminder | nu
 
             <div>
               <label className={labelCls}>周期类型</label>
-              <select className={inputCls} value={cycleType} onChange={(e) => setCycleType(e.target.value as any)}>
+              <Select value={cycleType} onChange={(e) => setCycleType(e.target.value as any)}>
                 <option value="daily">每天</option>
                 <option value="weekly">每周（选星期）</option>
                 <option value="monthly">每月（选几号）</option>
-              </select>
+              </Select>
             </div>
 
             {cycleType === 'weekly' && (

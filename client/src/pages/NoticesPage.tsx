@@ -6,7 +6,7 @@ import { NOTICE_STATUS_LABELS } from '../types';
 import Card from '../components/ui/Card';
 import { KirbyTitleIcon, KirbyCornerSticker } from '../components/theme/KirbyDecorations';
 import Button from '../components/ui/Button';
-import Input, { Textarea } from '../components/ui/Input';
+import Input, { Select, Textarea } from '../components/ui/Input';
 import Drawer from '../components/ui/Drawer';
 import Badge from '../components/ui/Badge';
 import { LoadingState, EmptyState } from '../components/ui/Feedback';
@@ -209,11 +209,11 @@ function NoticeForm({ initial, onSubmit, onCancel }: { initial?: Notice; onSubmi
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">状态</label>
-        <select value={status} onChange={(e) => setStatus(e.target.value as Notice['status'])} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+        <Select value={status} onChange={(e) => setStatus(e.target.value as Notice['status'])}>
           <option value="pending">待处理</option>
           <option value="in_progress">进行中</option>
           <option value="done">已完成</option>
-        </select>
+        </Select>
       </div>
       <div className="flex gap-3 pt-1">
         <Button type="submit" className="flex-1">保存</Button>
