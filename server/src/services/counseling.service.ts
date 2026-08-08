@@ -31,6 +31,9 @@ export async function createCounseling(ctx: UserCtx, input: CounselingInput) {
   // 校验学生可见（本学院共享）
   const student = await prisma.student.findFirst({ where: { ...visibleStudentWhere(ctx), id: input.studentId } });
   if (!student) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
+  if (student.studentStatus && student.studentStatus !== 'active') {
+    throw Object.assign(new Error('休学/不在籍学生不可添加谈心记录，仅可查询'), { statusCode: 403 });
+  }
   const parsedDate = parseDateSafe(input.date);
   if (!parsedDate) throw Object.assign(new Error('谈心日期格式无效'), { statusCode: 400 });
   const record = await prisma.counseling.create({
@@ -103,10 +106,11 @@ export interface CounselingStats {
   recent: any[];
 }
 
-/** 学期谈心统计：覆盖率、未谈心名单、类型分布、最近记录（可见范围） */
+/** 学期谈心统计：覆盖率、未谈心名单、类型分布、最近记录（可见范围，仅统计在学） */
 export async function getSemesterStats(ctx: UserCtx, range: { start?: string; end?: string }) {
+  const activeWhere = { ...visibleStudentWhere(ctx), studentStatus: 'active' };
   const students = await prisma.student.findMany({
-    where: visibleStudentWhere(ctx),
+    where: activeWhere,
     select: { id: true, name: true, className: true, grade: true, isMentalTarget: true },
   });
 
@@ -115,7 +119,7 @@ export async function getSemesterStats(ctx: UserCtx, range: { start?: string; en
   if (range.end) dateFilter.lte = new Date(`${range.end}T23:59:59.999`);
 
   const counselings = await prisma.counseling.findMany({
-    where: { student: visibleStudentWhere(ctx), date: dateFilter },
+    where: { student: activeWhere, date: dateFilter },
     select: { studentId: true, type: true },
   });
 
@@ -134,7 +138,7 @@ export async function getSemesterStats(ctx: UserCtx, range: { start?: string; en
     .sort((a, b) => (a.isMentalTarget === b.isMentalTarget ? 0 : a.isMentalTarget ? -1 : 1));
 
   const recent = await prisma.counseling.findMany({
-    where: { student: visibleStudentWhere(ctx) },
+    where: { student: activeWhere },
     orderBy: { date: 'desc' },
     take: 10,
     include: { student: { select: { id: true, name: true, className: true, isMentalTarget: true } } },

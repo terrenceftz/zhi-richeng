@@ -5,7 +5,7 @@ import * as studentsApi from '../api/students';
 import * as counselingApi from '../api/counseling';
 import * as mentalApi from '../api/mental';
 import type { Student, Counseling, MentalRecord, MentalProfile, StudentField } from '../types';
-import { COUNSELING_TYPES, STUDENT_TYPES, STUDENT_TYPE_LABELS, MENTAL_LEVELS, MENTAL_LEVEL_LABELS, MENTAL_STATUS_LABELS, MENTAL_CATEGORIES, CONCERN_LEVEL_LABELS } from '../types';
+import { COUNSELING_TYPES, STUDENT_TYPES, STUDENT_TYPE_LABELS, STUDENT_STATUS_LABELS, MENTAL_LEVELS, MENTAL_LEVEL_LABELS, MENTAL_STATUS_LABELS, MENTAL_CATEGORIES, CONCERN_LEVEL_LABELS } from '../types';
 import Card from '../components/ui/Card';
 import { KirbyTitleIcon } from '../components/theme/KirbyDecorations';
 import Button from '../components/ui/Button';
@@ -32,6 +32,7 @@ export default function StudentsPage() {
   const [q, setQ] = useState('');
   const [className, setClassName] = useState('');
   const [grade, setGrade] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [mentalOnly, setMentalOnly] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -63,6 +64,7 @@ export default function StudentsPage() {
         className: className || undefined,
         grade: grade || undefined,
         mentalTarget: mentalOnly ? 'true' : undefined,
+        studentStatus: statusFilter || undefined,
         page: targetPage,
         pageSize,
       });
@@ -154,6 +156,21 @@ export default function StudentsPage() {
     }
   };
 
+  const handleStatusChange = async (s: Student, status: string) => {
+    if (status === s.studentStatus) return;
+    const label = STUDENT_STATUS_LABELS[status as keyof typeof STUDENT_STATUS_LABELS] || status;
+    if (status === 'inactive' && !confirm(`确定将 ${s.name} 设为「不在籍」（毕业/退学）？该学生将封存只读，仅可查询。`)) return;
+    if (status === 'suspended' && !confirm(`确定将 ${s.name} 设为「休学」？休学期间不计入在籍人数与统计，不参与台账跟进/谈心提醒。`)) return;
+    try {
+      await studentsApi.updateStudentStatus(s.id, status);
+      toast.success(`${s.name} 状态已更新为「${label}」`);
+      load(page);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '状态更新失败';
+      toast.error(msg);
+    }
+  };
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -220,6 +237,12 @@ export default function StudentsPage() {
           <option value="">全部班级</option>
           {classes.map((c) => <option key={c} value={c}>{c}</option>)}
         </Select>
+        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-28">
+          <option value="">在学+休学</option>
+          <option value="active">在学</option>
+          <option value="suspended">休学</option>
+          <option value="inactive">不在籍</option>
+        </Select>
         <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${mentalOnly ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'}`}>
           <Heart className="h-4 w-4" />
           <input type="checkbox" checked={mentalOnly} onChange={(e) => setMentalOnly(e.target.checked)} className="hidden" />
@@ -242,6 +265,7 @@ export default function StudentsPage() {
                   <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">班级 / 年级</th>
                   <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">学生类型</th>
                   <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">手机</th>
+                  <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">状态</th>
                   <th className="whitespace-nowrap px-3 py-3 font-medium md:px-4">台账</th>
                   {extraFields.map((f) => (
                     <th key={f.key} className="whitespace-nowrap px-3 py-3 font-medium md:px-4">{f.label}</th>
@@ -273,8 +297,26 @@ export default function StudentsPage() {
                         : <span className="text-slate-400">-</span>}
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-slate-600 dark:text-slate-300 md:px-4">{s.phone || '-'}</td>
+                    <td className="whitespace-nowrap px-3 py-3 md:px-4">
+                      <select
+                        value={s.studentStatus || 'active'}
+                        onChange={(e) => handleStatusChange(s, e.target.value)}
+                        title="变更学生状态（休学/复学/毕业/退学）"
+                        className={`cursor-pointer rounded-full border px-2 py-0.5 text-xs font-medium transition-colors ${
+                          s.studentStatus === 'inactive'
+                            ? 'border-slate-300 bg-slate-100 text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                            : s.studentStatus === 'suspended'
+                              ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300'
+                              : 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300'
+                        }`}
+                      >
+                        <option value="active">在学</option>
+                        <option value="suspended">休学</option>
+                        <option value="inactive">不在籍</option>
+                      </select>
+                    </td>
                     <td className="px-3 py-3 md:px-4">
-                      <button onClick={() => handleToggleMental(s)} className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${s.isMentalTarget ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'}`}>
+                      <button onClick={() => handleToggleMental(s)} disabled={s.studentStatus !== 'active'} title={s.studentStatus !== 'active' ? '休学/不在籍学生不可标记台账' : undefined} className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${s.isMentalTarget ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'}`}>
                         <Heart className={`h-3 w-3 ${s.isMentalTarget ? 'fill-current' : ''}`} />
                         {s.isMentalTarget ? `${s._count?.mentalRecords || 0} 条` : '标记'}
                       </button>
@@ -286,9 +328,11 @@ export default function StudentsPage() {
                     ))}
                     <td className="px-3 py-3 md:px-4">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openEdit(s)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800" aria-label="编辑">
-                          <Pencil className="h-4 w-4" />
-                        </button>
+                        {s.studentStatus !== 'inactive' && (
+                          <button onClick={() => openEdit(s)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800" aria-label="编辑">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        )}
                         <button onClick={() => handleDelete(s.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" aria-label="删除">
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -528,6 +572,7 @@ function StudentDetail({ student, fields, onToggleMental, onMentalChanged, onPro
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <Info label="学号" value={student.studentNo} />
+            <Info label="学生状态" value={student.studentStatus ? STUDENT_STATUS_LABELS[student.studentStatus as keyof typeof STUDENT_STATUS_LABELS] || student.studentStatus : undefined} />
             <Info label="性别" value={student.gender} />
             <Info label="出生日期" value={student.birthDate?.slice(0, 10)} />
             <Info label="学生类型" value={student.studentType ? STUDENT_TYPE_LABELS[student.studentType] || student.studentType : undefined} />

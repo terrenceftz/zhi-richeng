@@ -8,6 +8,14 @@ export interface StudentField {
   options?: string[];
 }
 
+/** 学生状态 */
+export type StudentStatus = 'active' | 'suspended' | 'inactive';
+export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
+  active: '在学',
+  suspended: '休学',
+  inactive: '不在籍',
+};
+
 export interface User {
   id: string;
   email: string;
@@ -95,6 +103,7 @@ export interface Student {
   remark?: string;
   extras?: Record<string, any>;
   college?: string;
+  studentStatus?: string;
   isMentalTarget?: boolean;
   createdAt: string;
   updatedAt: string;

@@ -9,7 +9,7 @@ export interface StudentsPage {
   totalPages: number;
 }
 
-export async function fetchStudents(filters?: { q?: string; className?: string; grade?: string; studentType?: string; mentalTarget?: string; page?: number; pageSize?: number }): Promise<StudentsPage> {
+export async function fetchStudents(filters?: { q?: string; className?: string; grade?: string; studentType?: string; mentalTarget?: string; studentStatus?: string; page?: number; pageSize?: number }): Promise<StudentsPage> {
   const { data } = await client.get('/students', { params: filters });
   return data;
 }
@@ -41,6 +41,12 @@ export async function updateStudent(id: string, input: Partial<Student>): Promis
 
 export async function deleteStudent(id: string): Promise<void> {
   await client.delete(`/students/${id}`);
+}
+
+/** 变更学生状态（在学/休学/不在籍） */
+export async function updateStudentStatus(id: string, status: string): Promise<Student> {
+  const { data } = await client.put(`/students/${id}/status`, { status });
+  return data.student;
 }
 
 export async function importStudents(students: Partial<Student>[]): Promise<{ created: number; updated: number; message: string }> {

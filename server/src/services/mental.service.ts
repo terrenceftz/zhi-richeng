@@ -71,10 +71,18 @@ export function parseDateSafe(raw: unknown): Date | null {
 
 // ================= 台账档案 =================
 
+/** 学生状态校验：休学/不在籍不可进行台账业务操作 */
+function assertBusiness(student: { studentStatus?: string | null }): void {
+  if (student.studentStatus && student.studentStatus !== 'active') {
+    throw Object.assign(new Error('休学/不在籍学生不可进行台账操作，仅可查询'), { statusCode: 403 });
+  }
+}
+
 /** 创建/更新台账档案（按 studentId upsert；同学院共同维护） */
 export async function upsertProfile(ctx: UserCtx, studentId: string, input: MentalProfileInput) {
   const student = await prisma.student.findFirst({ where: { ...visibleStudentWhere(ctx), id: studentId } });
   if (!student) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
+  assertBusiness(student);
 
   const data: any = {
     userId: ctx.userId!,
@@ -141,6 +149,7 @@ export async function getMentalStudents(ctx: UserCtx) {
 export async function toggleMentalTarget(ctx: UserCtx, studentId: string, value: boolean) {
   const student = await prisma.student.findFirst({ where: { ...visibleStudentWhere(ctx), id: studentId } });
   if (!student) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
+  assertBusiness(student);
 
   // 标记 + 自动建档（upsert 防并发 P2002）：同一事务
   await prisma.$transaction([
@@ -180,6 +189,7 @@ export async function getRecords(ctx: UserCtx, filters: { studentId?: string; st
 export async function createRecord(ctx: UserCtx, input: MentalRecordInput) {
   const student = await prisma.student.findFirst({ where: { ...visibleStudentWhere(ctx), id: input.studentId } });
   if (!student) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
+  assertBusiness(student);
 
   // 跟进记录 + 自动建档（upsert 防并发冲突）+ 标记台账：同一事务
   const [record] = await prisma.$transaction([

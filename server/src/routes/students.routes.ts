@@ -25,6 +25,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       grade: (req.query.grade as string) || undefined,
       studentType: (req.query.studentType as string) || undefined,
       mentalTarget: (req.query.mentalTarget as string) || undefined,
+      studentStatus: (req.query.studentStatus as string) || undefined,
       page: parseInt(req.query.page as string) || 1,
       pageSize: parseInt(req.query.pageSize as string) || 30,
     });
@@ -173,6 +174,20 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
   try {
     await studentsService.deleteStudent(ctxOf(req), req.params.id);
     res.json({ message: '已删除' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 变更学生状态（在学/休学/不在籍）：所有辅导员可操作本学院学生；不在籍改回仅管理员
+router.put('/:id/status', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { status } = req.body;
+    if (!['active', 'suspended', 'inactive'].includes(status)) {
+      return res.status(400).json({ message: '无效的学生状态' });
+    }
+    const student = await studentsService.setStudentStatus(ctxOf(req), req.params.id, status);
+    res.json({ student });
   } catch (err) {
     next(err);
   }

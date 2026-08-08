@@ -37,6 +37,8 @@ export async function getOverview(ctx: UserCtx) {
   }).length;
 
   const studentWhere = visibleStudentWhere(ctx);
+  // 在籍口径：仅统计「在学」学生及其记录
+  const activeWhere = { ...studentWhere, studentStatus: 'active' };
   const [
     studentCount,
     mentalTargetCount,
@@ -46,10 +48,10 @@ export async function getOverview(ctx: UserCtx) {
     taskCount,
     pendingNoticeCount,
   ] = await Promise.all([
-    prisma.student.count({ where: studentWhere }),
-    prisma.student.count({ where: { ...studentWhere, isMentalTarget: true } }),
-    prisma.counseling.count({ where: { student: studentWhere } }),
-    prisma.mentalRecord.count({ where: { student: studentWhere } }),
+    prisma.student.count({ where: activeWhere }),
+    prisma.student.count({ where: { ...activeWhere, isMentalTarget: true } }),
+    prisma.counseling.count({ where: { student: activeWhere } }),
+    prisma.mentalRecord.count({ where: { student: activeWhere } }),
     prisma.notice.count({ where: { userId: ctx.userId } }),
     prisma.task.count({ where: { userId: ctx.userId } }),
     prisma.notice.count({ where: { userId: ctx.userId, status: { not: 'done' } } }),
@@ -74,17 +76,17 @@ export async function getOverview(ctx: UserCtx) {
 }
 
 export async function getStudentDist(ctx: UserCtx) {
-  const studentWhere = visibleStudentWhere(ctx);
+  const activeWhere = { ...visibleStudentWhere(ctx), studentStatus: 'active' };
   const [byGrade, byType, byGender] = await Promise.all([
     prisma.student.groupBy({
-      by: ['grade'], where: { ...studentWhere, grade: { not: null } }, _count: { _all: true },
+      by: ['grade'], where: { ...activeWhere, grade: { not: null } }, _count: { _all: true },
       orderBy: [{ grade: 'asc' }],
     }),
     prisma.student.groupBy({
-      by: ['studentType'], where: { ...studentWhere, studentType: { not: null } }, _count: { _all: true },
+      by: ['studentType'], where: { ...activeWhere, studentType: { not: null } }, _count: { _all: true },
     }),
     prisma.student.groupBy({
-      by: ['gender'], where: { ...studentWhere, gender: { not: null } }, _count: { _all: true },
+      by: ['gender'], where: { ...activeWhere, gender: { not: null } }, _count: { _all: true },
     }),
   ]);
 
@@ -96,9 +98,9 @@ export async function getStudentDist(ctx: UserCtx) {
 }
 
 export async function getMentalDist(ctx: UserCtx) {
-  const studentWhere = visibleStudentWhere(ctx);
+  const activeWhere = { ...visibleStudentWhere(ctx), studentStatus: 'active' };
   const targets = await prisma.student.findMany({
-    where: { ...studentWhere, isMentalTarget: true },
+    where: { ...activeWhere, isMentalTarget: true },
     select: { id: true, mentalProfile: true },
   });
 
@@ -133,7 +135,7 @@ export async function getMentalDist(ctx: UserCtx) {
   }
   const monthStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const records = await prisma.mentalRecord.findMany({
-    where: { student: studentWhere, date: { gte: monthStart } },
+    where: { student: activeWhere, date: { gte: monthStart } },
     select: { date: true },
   });
   for (const r of records) {

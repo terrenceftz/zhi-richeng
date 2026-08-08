@@ -50,7 +50,7 @@ export async function getNoFollowUpThisMonth(ctx: UserCtx): Promise<any[]> {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const students = await prisma.student.findMany({
-    where: { ...visibleStudentWhere(ctx), isMentalTarget: true },
+    where: { ...visibleStudentWhere(ctx), isMentalTarget: true, studentStatus: 'active' },
     include: {
       mentalProfile: true,
       mentalRecords: {
@@ -72,7 +72,7 @@ export async function getNoFollowUpThisMonth(ctx: UserCtx): Promise<any[]> {
 export async function getRiskAlerts(ctx: UserCtx): Promise<any[]> {
   const now = new Date();
   const students = await prisma.student.findMany({
-    where: { ...visibleStudentWhere(ctx), isMentalTarget: true },
+    where: { ...visibleStudentWhere(ctx), isMentalTarget: true, studentStatus: 'active' },
     include: {
       mentalProfile: true,
       mentalRecords: { orderBy: { date: 'desc' }, take: 1, select: { id: true, date: true, situation: true } },

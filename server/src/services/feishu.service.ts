@@ -6,6 +6,7 @@ import * as llmService from './llm.service';
 import { formatTaskCard } from './taskFormat';
 import { handleStudentQuery } from './studentQuery.service';
 import { handleMentalFollowUp } from './mentalFollowUp.service';
+import { handleStudentStatusChange } from './studentStatusFollowUp.service';
 
 
 let wsClient: Lark.WSClient | null = null;
@@ -168,6 +169,13 @@ export async function startFeishuClient(): Promise<void> {
             const followUpReply = await handleMentalFollowUp(targetUserId, text);
             if (followUpReply) {
               await sendReply(client, chatId, followUpReply);
+              return;
+            }
+
+            // 学生状态变更：休学/复学/毕业/退学
+            const statusReply = await handleStudentStatusChange(targetUserId, text);
+            if (statusReply) {
+              await sendReply(client, chatId, statusReply);
               return;
             }
 

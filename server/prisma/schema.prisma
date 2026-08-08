@@ -106,6 +106,7 @@ model Student {
   remark      String?
   extras      String       @default("{}") // JSON 对象：自定义扩展字段值（学历类别/家长信息等可配置字段）
   college     String       @default("") // 学生所属学院（同学院辅导员共享可见）
+  studentStatus String     @default("active") // active 在学 | suspended 休学 | inactive 不在籍(毕业/退学,封存)
   isMentalTarget Boolean   @default(false) // 是否心理台账重点关注学生
   counselings Counseling[]
   mentalRecords MentalRecord[]

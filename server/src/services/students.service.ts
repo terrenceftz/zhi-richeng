@@ -1,6 +1,6 @@
 import prisma from '../db';
 import * as audit from './audit.service';
-import { visibleStudentWhere, canManageStudent, type UserCtx } from '../utils/scope';
+import { visibleStudentWhere, canManageStudent, isAdmin, type UserCtx } from '../utils/scope';
 
 export interface StudentInput {
   name: string;
@@ -39,13 +39,21 @@ function forbidden(): never {
   throw Object.assign(new Error('无权限操作该学生'), { statusCode: 403 });
 }
 
-export async function getStudents(ctx: UserCtx, filters: { q?: string; className?: string; grade?: string; studentType?: string; mentalTarget?: string; page?: number; pageSize?: number }) {
+export async function getStudents(ctx: UserCtx, filters: { q?: string; className?: string; grade?: string; studentType?: string; mentalTarget?: string; studentStatus?: string; page?: number; pageSize?: number }) {
   // 可见范围 OR 与搜索条件是 AND 关系：搜索词绝不能绕过学院可见性
   const where: any = visibleStudentWhere(ctx);
   if (filters.className) where.className = filters.className;
   if (filters.grade) where.grade = filters.grade;
   if (filters.studentType) where.studentType = filters.studentType;
   if (filters.mentalTarget === 'true') where.isMentalTarget = true;
+  // 状态筛选：默认隐藏「不在籍」，可选查看
+  if (filters.studentStatus === 'all') {
+    // 全部状态（含不在籍）
+  } else if (filters.studentStatus) {
+    where.studentStatus = filters.studentStatus;
+  } else {
+    where.studentStatus = { not: 'inactive' };
+  }
   if (filters.q) {
     where.AND = [
       {
@@ -160,6 +168,9 @@ export async function updateStudent(ctx: UserCtx, id: string, input: Partial<Stu
   const existing = await prisma.student.findFirst({ where: { ...visibleStudentWhere(ctx), id } });
   if (!existing) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
   if (!canManageStudent(ctx, existing)) forbidden();
+  if (existing.studentStatus === 'inactive') {
+    throw Object.assign(new Error('不在籍学生已封存，仅可查询，不可编辑'), { statusCode: 403 });
+  }
 
   const s = await prisma.student.update({ where: { id }, data: buildUpdateData(input) });
   await audit.log(ctx.userId!, 'student_update', {
@@ -180,6 +191,31 @@ export async function deleteStudent(ctx: UserCtx, id: string) {
     detail: `删除学生 ${existing.name}`,
   });
   return prisma.student.delete({ where: { id } });
+}
+
+/**
+ * 变更学生状态（在学/休学/不在籍）。
+ * - 所有辅导员可操作本学院可见学生（active↔suspended、→inactive）
+ * - 不在籍为终态：改回仅在学/休学仅系统管理员（防误操作）
+ */
+export async function setStudentStatus(ctx: UserCtx, id: string, status: string): Promise<any> {
+  if (!['active', 'suspended', 'inactive'].includes(status)) {
+    throw Object.assign(new Error('无效的学生状态'), { statusCode: 400 });
+  }
+  const existing = await prisma.student.findFirst({ where: { ...visibleStudentWhere(ctx), id } });
+  if (!existing) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
+  if (existing.studentStatus === 'inactive' && status !== 'inactive' && !isAdmin(ctx.role)) {
+    throw Object.assign(new Error('不在籍学生仅系统管理员可恢复状态'), { statusCode: 403 });
+  }
+  if (existing.studentStatus === status) return parseTags(existing);
+
+  const updated = await prisma.student.update({ where: { id }, data: { studentStatus: status } });
+  await audit.log(ctx.userId!, 'student_update', {
+    entityType: 'student',
+    entityId: id,
+    detail: `学生状态变更：${existing.name} ${existing.studentStatus} → ${status}`,
+  });
+  return parseTags(updated);
 }
 
 export interface UpsertResult {
@@ -271,6 +307,7 @@ export const PRESET_STUDENT_FIELDS: StudentField[] = [
 export const BUILTIN_STUDENT_FIELDS: StudentField[] = [
   { key: 'name', label: '姓名', type: 'text' },
   { key: 'studentNo', label: '学号', type: 'text' },
+  { key: 'studentStatus', label: '学生状态', type: 'select', options: ['在学', '休学', '不在籍'] },
   { key: 'className', label: '班级', type: 'text' },
   { key: 'gender', label: '性别', type: 'select', options: ['男', '女'] },
   { key: 'birthDate', label: '出生日期', type: 'text' },
