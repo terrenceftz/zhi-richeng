@@ -1,10 +1,19 @@
+export type UserRole = 'user' | 'dept_admin' | 'admin';
+
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'user' | 'admin';
+  role: UserRole;
   createdAt: string;
 }
+
+/** 角色展示名与徽章配色 */
+export const ROLE_LABELS: Record<UserRole, string> = {
+  admin: '系统管理员',
+  dept_admin: '院系管理员',
+  user: '普通用户',
+};
 
 export interface Task {
   id: string;

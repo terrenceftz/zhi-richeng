@@ -20,7 +20,6 @@ const navItems = [
 export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const isAdmin = user?.role === 'admin';
 
   const handleLogout = async () => {
     await logout();
@@ -90,7 +89,8 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{user?.name || '用户'}</p>
-              {isAdmin && <Badge tone="brand">管理员</Badge>}
+              {user?.role === 'admin' && <Badge tone="brand">系统管理员</Badge>}
+              {user?.role === 'dept_admin' && <Badge tone="blue">院系管理员</Badge>}
             </div>
             <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
           </div>

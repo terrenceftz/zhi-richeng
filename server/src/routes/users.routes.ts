@@ -79,4 +79,29 @@ router.delete('/:id', requireAdmin, async (req: Request, res: Response, next: Ne
   }
 });
 
+// 调整用户角色（分级）：仅管理员。roles: admin 系统管理员 / dept_admin 院系管理员 / user 普通用户
+router.put('/:id/role', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { role } = req.body;
+    if (!['admin', 'dept_admin', 'user'].includes(role)) {
+      return res.status(400).json({ message: '无效的角色' });
+    }
+    if (req.params.id === req.userId && role !== 'admin') {
+      return res.status(400).json({ message: '不能取消自己的管理员角色' });
+    }
+    const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ message: '用户不存在' });
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { role },
+      select: PUBLIC_FIELDS,
+    });
+    // 角色变更后吊销该用户全部 refresh token，强制重新登录以同步权限
+    await prisma.refreshToken.deleteMany({ where: { userId: req.params.id } });
+    res.json({ user });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

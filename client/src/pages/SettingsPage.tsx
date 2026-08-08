@@ -151,9 +151,13 @@ export default function SettingsPage() {
       </div>
 
       <div className="mt-6 max-w-[1100px] space-y-6">
-        <UsersCard />
-        <AuditLogCard />
-        <BackupCard />
+        {user?.role === 'admin' && (
+          <>
+            <UsersCard />
+            <AuditLogCard />
+            <BackupCard />
+          </>
+        )}
         <AboutCard />
       </div>
     </div>
