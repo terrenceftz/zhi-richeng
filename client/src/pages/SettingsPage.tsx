@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useToastStore } from '../stores/toastStore';
 import client from '../api/client';
@@ -88,7 +88,7 @@ export default function SettingsPage() {
         设置
       </h2>
 
-      <div className="grid max-w-[1100px] grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <div className="space-y-6">
           <DeepSeekCard
             hasKey={data.hasDeepSeekKey}
@@ -105,6 +105,19 @@ export default function SettingsPage() {
               set('feishuConfigured', true);
             }}
             onBindOpenId={async (openId) => { await put({ feishuOpenId: openId }); set('feishuOpenId', openId); }}
+          />
+          <AccountCard
+            email={user?.email || ''} name={profileName}
+            onSave={async (name, password, oldPassword) => {
+              const body: Record<string, string> = {};
+              if (name) body.name = name;
+              if (password) {
+                body.password = password;
+                body.oldPassword = oldPassword;
+              }
+              await client.put('/users/me', body);
+              toast.success('个人信息已更新');
+            }}
           />
         </div>
 
@@ -134,30 +147,28 @@ export default function SettingsPage() {
             onToggle={async (enabled) => { set('reminderEnabled', enabled); await put({ reminderEnabled: enabled }); }}
             onSaveMinutes={async (m) => { set('reminderMinutes', m); await put({ reminderMinutes: m }); }}
           />
-          <AccountCard
-            email={user?.email || ''} name={profileName}
-            onSave={async (name, password, oldPassword) => {
-              const body: Record<string, string> = {};
-              if (name) body.name = name;
-              if (password) {
-                body.password = password;
-                body.oldPassword = oldPassword;
-              }
-              await client.put('/users/me', body);
-              toast.success('个人信息已更新');
-            }}
-          />
         </div>
       </div>
 
-      <div className="mt-6 max-w-[1100px] space-y-6">
-        {user?.role === 'admin' && (
-          <>
+      {/* 系统管理（仅系统管理员） */}
+      {user?.role === 'admin' && (
+        <div className="mt-8">
+          <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <ShieldCheck className="h-4 w-4 text-brand-500" />
+            系统管理
+          </h3>
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <UsersCard />
             <AuditLogCard />
-            <BackupCard />
-          </>
-        )}
+            <div className="xl:col-span-2">
+              <BackupCard />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 关于 */}
+      <div className="mt-8">
         <AboutCard />
       </div>
     </div>
