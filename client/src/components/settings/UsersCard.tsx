@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Users, Trash2 } from 'lucide-react';
+import { Users, Trash2, UserPlus, Save } from 'lucide-react';
 import client from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import { useToastStore } from '../../stores/toastStore';
 import type { UserRole } from '../../types';
 import Card from './Card';
 import Badge from '../ui/Badge';
+import Button from '../ui/Button';
+import Modal from '../ui/Modal';
 
 interface UserRow {
   id: string;
@@ -28,6 +30,9 @@ const ROLE_BADGE: Record<string, { tone: 'brand' | 'blue' | 'gray'; label: strin
   user: { tone: 'gray', label: '普通用户' },
 };
 
+const inputCls =
+  'rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200';
+
 export default function UsersCard() {
   const { user } = useAuthStore();
   const toast = useToastStore();
@@ -36,6 +41,9 @@ export default function UsersCard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [saving, setSaving] = useState(false);
   const [changingId, setChangingId] = useState<string | null>(null);
+  const [collegeDraft, setCollegeDraft] = useState<Record<string, string>>({});
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ email: '', name: '', password: '', role: 'user' as UserRole, college: '' });
 
   const load = async () => {
     try {
@@ -57,6 +65,13 @@ export default function UsersCard() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 每次用户列表刷新后同步学院草稿（保存/创建后回填服务端值）
+  useEffect(() => {
+    const draft: Record<string, string> = {};
+    users.forEach((u) => { draft[u.id] = u.college || ''; });
+    setCollegeDraft(draft);
+  }, [users]);
 
   const toggleReg = async () => {
     setSaving(true);
@@ -87,13 +102,16 @@ export default function UsersCard() {
   };
 
   const saveCollege = async (id: string, college: string) => {
+    setChangingId(id);
     try {
-      await client.put(`/users/${id}/role`, { college: college.trim() });
-      toast.success('学院已更新');
+      await client.put(`/users/${id}/role`, { college: (college || '').trim() });
+      toast.success('学院已保存');
       await load();
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存失败';
       toast.error(msg);
+    } finally {
+      setChangingId(null);
     }
   };
 
@@ -108,11 +126,31 @@ export default function UsersCard() {
     }
   };
 
-  // 非管理员：不展示管理入口（修复此前「能看到注册开关但操作被 403」的问题）
+  const createUser = async () => {
+    if (!createForm.email.trim() || !createForm.name.trim() || !createForm.password) {
+      toast.error('请填写邮箱、姓名和密码');
+      return;
+    }
+    setSaving(true);
+    try {
+      await client.post('/users', createForm);
+      toast.success('账户已创建');
+      setShowCreate(false);
+      setCreateForm({ email: '', name: '', password: '', role: 'user', college: '' });
+      await load();
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '创建失败';
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 非管理员：不展示管理入口
   if (!isAdmin) return null;
 
   return (
-    <Card title={<><Users className="h-5 w-5" />用户管理</>} subtitle="管理注册开关、用户账户与角色分级（系统管理员）">
+    <Card title={<><Users className="h-5 w-5" />用户管理</>} subtitle="管理注册开关、用户账户、角色与学院（系统管理员）">
       <div className="mb-4 flex items-center justify-between border-b border-slate-200 py-3 dark:border-slate-800">
         <div>
           <p className="text-sm font-medium text-slate-800 dark:text-slate-200">开放注册</p>
@@ -128,9 +166,18 @@ export default function UsersCard() {
         </span>
       </div>
 
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">账户列表（{users.length}）</p>
+        <Button size="sm" onClick={() => setShowCreate(true)}>
+          <UserPlus className="h-4 w-4" /> 新增账户
+        </Button>
+      </div>
+
       <div className="space-y-1">
         {users.map((u) => {
           const badge = ROLE_BADGE[u.role] || ROLE_BADGE.user;
+          const draft = collegeDraft[u.id] ?? u.college ?? '';
+          const dirty = (draft || '').trim() !== (u.college || '');
           return (
             <div key={u.id} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800">
               <div className="min-w-0">
@@ -142,19 +189,29 @@ export default function UsersCard() {
                 <p className="truncate text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <input
-                  defaultValue={u.college || ''}
-                  placeholder="所属学院"
-                  onBlur={(e) => { if ((e.target.value || '').trim() !== (u.college || '')) saveCollege(u.id, e.target.value); }}
-                  title="设置该用户所属学院（同学院辅导员共享学生/台账数据）"
-                  className="w-28 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                />
+                <div className="flex items-center gap-1">
+                  <input
+                    value={draft}
+                    onChange={(e) => setCollegeDraft({ ...collegeDraft, [u.id]: e.target.value })}
+                    placeholder="所属学院"
+                    title="该用户所属学院（同学院辅导员共享学生/台账数据）"
+                    className={`${inputCls} w-28`}
+                  />
+                  <button
+                    onClick={() => saveCollege(u.id, draft)}
+                    disabled={!dirty || changingId === u.id}
+                    title="保存学院"
+                    className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-brand-50 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-brand-500/10"
+                  >
+                    <Save className="h-4 w-4" />
+                  </button>
+                </div>
                 <select
                   value={u.role}
                   disabled={u.id === user?.id || changingId === u.id}
                   onChange={(e) => changeRole(u.id, e.target.value as UserRole)}
                   title={u.id === user?.id ? '不能修改自己的角色' : '切换角色（用户需重新登录生效）'}
-                  className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className={`${inputCls} cursor-pointer disabled:cursor-not-allowed disabled:opacity-50`}
                 >
                   {ROLE_OPTIONS.map((r) => (
                     <option key={r.value} value={r.value}>{r.label}</option>
@@ -177,8 +234,43 @@ export default function UsersCard() {
       </div>
 
       <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
-        <span className="font-medium text-slate-600 dark:text-slate-300">角色说明</span>：普通用户可用的全部业务功能（学生/台账/谈心/任务/通知/导出），院系管理员在普通用户基础上获得院系管理标识；系统管理员额外拥有用户管理、备份、审计日志与系统配置权限。切换角色后需重新登录生效。
+        <span className="font-medium text-slate-600 dark:text-slate-300">角色说明</span>：普通用户可用的全部业务功能（学生/台账/谈心/任务/通知/导出），院系管理员在普通用户基础上获得院系管理标识；系统管理员额外拥有用户管理、备份、审计日志与系统配置权限。切换角色后需重新登录生效。学院用于同学院辅导员共享学生/台账数据。
       </p>
+
+      <Modal open={showCreate} title="新增账户" onClose={() => setShowCreate(false)}>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">姓名</label>
+            <input className={`${inputCls} w-full px-3 py-2 text-sm`} value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} placeholder="如：张老师" />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">邮箱</label>
+            <input className={`${inputCls} w-full px-3 py-2 text-sm`} value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} placeholder="teacher@example.com" />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">初始密码</label>
+            <input type="password" className={`${inputCls} w-full px-3 py-2 text-sm`} value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} placeholder="至少 6 位" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">角色</label>
+              <select className={`${inputCls} w-full cursor-pointer px-3 py-2 text-sm`} value={createForm.role} onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as UserRole })}>
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">所属学院</label>
+              <input className={`${inputCls} w-full px-3 py-2 text-sm`} value={createForm.college} onChange={(e) => setCreateForm({ ...createForm, college: e.target.value })} placeholder="如：法学院" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setShowCreate(false)}>取消</Button>
+            <Button onClick={createUser} disabled={saving}>{saving ? '创建中...' : '创建账户'}</Button>
+          </div>
+        </div>
+      </Modal>
     </Card>
   );
 }

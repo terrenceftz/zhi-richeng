@@ -4,6 +4,7 @@ import prisma from '../db';
 export const AUDIT_ACTIONS = {
   login: '登录',
   register: '注册',
+  user_create: '后台创建账户',
   student_create: '新增学生',
   student_update: '修改学生',
   student_delete: '删除学生',

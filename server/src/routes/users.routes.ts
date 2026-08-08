@@ -66,6 +66,43 @@ router.get('/', requireAdmin, async (_req: Request, res: Response, next: NextFun
   }
 });
 
+// 创建账户（后台添加）：仅管理员
+router.post('/', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password, name, role, college } = req.body;
+    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ message: '邮箱格式不正确' });
+    }
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ message: '密码长度至少 6 位' });
+    }
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ message: '缺少姓名' });
+    }
+    const finalRole = role && ['admin', 'dept_admin', 'user'].includes(role) ? role : 'user';
+    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    if (existing) return res.status(409).json({ message: '该邮箱已存在' });
+
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase().trim(),
+        password: await hashPassword(password),
+        name: String(name).slice(0, 50),
+        role: finalRole,
+        college: typeof college === 'string' ? college.slice(0, 100) : '',
+      },
+      select: PUBLIC_FIELDS,
+    });
+    await (await import('../services/audit.service')).log(req.userId!, 'user_create', {
+      detail: `后台创建账户 ${user.email}（${finalRole}）`,
+      ip: req.ip,
+    });
+    res.status(201).json({ user });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // 删除用户：仅管理员
 router.delete('/:id', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
