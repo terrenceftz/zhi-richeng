@@ -118,11 +118,12 @@
     @apply rounded-2xl border border-slate-200 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900;
   }
 
-  /* 全站下拉框统一样式：去掉浏览器默认箭头，替换为品牌色 chevron */
+  /* 全站下拉框统一样式：覆盖浏览器默认外观（边框/背景/字体/聚焦态），并替换默认箭头 */
   select {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
+    @apply cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.5rem center;
