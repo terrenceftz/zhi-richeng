@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/auth.service';
 import * as settingsService from '../services/settings.service';
+import * as audit from '../services/audit.service';
 import prisma from '../db';
 
 export async function register(req: Request, res: Response, next: NextFunction) {
@@ -38,6 +39,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       return res.status(400).json({ message: '缺少必填字段：email, password' });
     }
     const result = await authService.login({ email, password });
+    await audit.log(result.user.id, 'login', { ip: req.ip });
     res.json({
       user: result.user,
       accessToken: result.tokens.accessToken,

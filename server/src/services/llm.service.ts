@@ -414,8 +414,13 @@ export async function extractNotice(text: string): Promise<{
   };
 }
 
-/** 生成台账学生下一步跟进建议（AI 台账智囊） */
-export async function mentalAdvice(profile: string, records: string): Promise<string> {
+/** 生成台账学生下一步跟进建议（AI 台账智囊 · 深度个性化版） */
+export async function mentalAdvice(ctx: {
+  profileText: string;
+  recordsText: string;
+  counselText: string;
+  riskText: string;
+}): Promise<string> {
   const apiKey = await getDeepSeekApiKey();
   const effectiveKey = apiKey || config.deepseek.apiKey;
   if (!effectiveKey) {
@@ -427,17 +432,132 @@ export async function mentalAdvice(profile: string, records: string): Promise<st
     messages: [
       {
         role: 'system',
-        content:
-          '你是高校辅导员的学生心理关怀助手。根据台账学生档案和历史跟进记录，生成下一步跟进建议（3-5 条）。' +
-          '要求：具体可操作、体现人文关怀与隐私保护、结合该生的关注级别和类别给出差异化建议；' +
-          '不要空话套话；分条列出，每条一句话到两句话。',
+        content: [
+          '你是高校心理健康辅导专员，为一线辅导员提供台账学生的个性化跟进建议。',
+          '',
+          '工作要求：',
+          '1. 先基于「风险状态」判断该生当前风险画像（一句话），再给出建议；',
+          '2. 建议必须结合档案、跟进记录、谈心记录中的【具体细节】（如某次谈心中提到的事件、某类别的具体表现），说明「为什么针对该生」；',
+          '3. 给出 3-5 条可操作的跟进建议，覆盖：近期沟通切入点、可能需警惕的信号、家校沟通策略（结合家长是否知情）；',
+          '4. 严禁套模板、严禁空话（"加强关注""及时疏导"这类无信息量表达），严禁编造档案中不存在的信息；',
+          '5. 涉及该生心理状态时语气专业、不贴标签、保护其人格尊严。',
+          '',
+          '隐私要求：输入的学生摘要已由系统脱敏（不含证件号、手机号、家庭住址、家长电话）；回复中也不得出现或推断这些信息。',
+          '输出为分段 Markdown（用 **加粗小标题** 分节），总字数 250 字以内。',
+        ].join('\n'),
       },
-      { role: 'user', content: `【学生档案】\n${profile}\n\n【历史跟进记录】\n${records}` },
+      {
+        role: 'user',
+        content: [
+          `【学生与档案】\n${ctx.profileText}`,
+          `【风险状态】\n${ctx.riskText || '暂无'}`,
+          `【台账跟进记录】\n${ctx.recordsText || '无'}`,
+          `【谈心记录（学生表现）】\n${ctx.counselText || '无'}`,
+        ].join('\n\n'),
+      },
     ],
-    temperature: 0.4,
-    max_tokens: 700,
+    temperature: 0.5,
+    max_tokens: 900,
   });
   return response.choices[0]?.message?.content?.trim() || '暂无可生成的建议';
+}
+
+/** 生成谈心谈话提纲（谈心前使用） */
+export async function counselingOutline(ctx: {
+  profileText: string;
+  recordsText: string;
+  counselText: string;
+  riskText: string;
+}): Promise<string> {
+  const apiKey = await getDeepSeekApiKey();
+  const effectiveKey = apiKey || config.deepseek.apiKey;
+  if (!effectiveKey) {
+    throw Object.assign(new Error('未配置 DeepSeek API Key，无法生成提纲'), { statusCode: 400 });
+  }
+  const client = new OpenAI({ apiKey: effectiveKey, baseURL: config.deepseek.baseURL, timeout: 20000 });
+  const response = await client.chat.completions.create({
+    model: config.deepseek.model,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          '你是高校辅导员的心理谈话规划助手，帮助生成一次谈心谈话的提纲。',
+          '',
+          '要求：',
+          '1. 基于学生档案、台账跟进、历史谈心中的【具体线索】设计 3-5 个谈话切入点；',
+          '2. 每个切入点给出：话题方向 + 一句自然的开场问法（温和、非审问式）；',
+          '3. 指出谈话中需要观察的信号（情绪、行为）与谈话禁忌；',
+          '4. 严禁套模板，引用该生历史记录里的真实细节设计个性化提问；',
+          '5. 若该生存在敏感经历（如已提及的心理困扰），切入点应避免直接揭伤疤，采用间接切入。',
+          '',
+          '隐私要求：输入已脱敏（不含证件号、手机号、住址、家长电话），回复也不得输出这些信息。',
+          '输出分段 Markdown，总字数 250 字以内。',
+        ].join('\n'),
+      },
+      {
+        role: 'user',
+        content: [
+          `【学生与档案】\n${ctx.profileText}`,
+          `【风险状态】\n${ctx.riskText || '暂无'}`,
+          `【台账跟进记录】\n${ctx.recordsText || '无'}`,
+          `【谈心记录（学生表现）】\n${ctx.counselText || '无'}`,
+        ].join('\n\n'),
+      },
+    ],
+    temperature: 0.6,
+    max_tokens: 900,
+  });
+  return response.choices[0]?.message?.content?.trim() || '暂无可生成的提纲';
+}
+
+/** 谈后总结：把辅导员的一句话描述整理成结构化谈心记录 */
+export async function counselingSummarize(rawText: string, ctx?: {
+  profileText: string;
+  recordsText: string;
+  counselText: string;
+  riskText: string;
+}): Promise<{ content: string; followUp: string }> {
+  const apiKey = await getDeepSeekApiKey();
+  const effectiveKey = apiKey || config.deepseek.apiKey;
+  if (!effectiveKey) {
+    throw Object.assign(new Error('未配置 DeepSeek API Key，无法整理记录'), { statusCode: 400 });
+  }
+  const client = new OpenAI({ apiKey: effectiveKey, baseURL: config.deepseek.baseURL, timeout: 20000 });
+  const response = await client.chat.completions.create({
+    model: config.deepseek.model,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          '你是高校辅导员的谈心记录整理助手。',
+          '把辅导员的一句话描述整理成正式的谈心记录。',
+          '',
+          '返回严格 JSON：',
+          '{"content":"结构化谈话内容（要点式，60-120字，包含：学生反馈的关键信息、情绪状态、可能的风险信号）","followUp":"下一步跟进建议（30字内，如无需跟进则为空字符串")}',
+          '要求：忠实原文不添油加醋、不编造未提到的信息、避免给学生的心理状态贴标签、语气专业平和。',
+          '只返回 JSON，不要其他文字。',
+        ].join('\n'),
+      },
+      {
+        role: 'user',
+        content: ctx
+          ? `【学生背景】\n${ctx.profileText}\n\n【辅导员口述】\n${rawText}`
+          : rawText,
+      },
+    ],
+    temperature: 0.3,
+    max_tokens: 500,
+  });
+  const content = (response.choices[0]?.message?.content || '{}').replace(/```json|```/g, '').trim();
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      content: String(parsed.content || rawText),
+      followUp: String(parsed.followUp || ''),
+    };
+  } catch {
+    return { content: rawText, followUp: '' };
+  }
 }
 
 /** 生成数据看板智能解读（AI 周报/月报） */

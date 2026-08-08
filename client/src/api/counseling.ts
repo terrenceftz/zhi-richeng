@@ -30,6 +30,18 @@ export async function fetchCounselings(filters?: { studentId?: string; from?: st
   return data.records;
 }
 
+/** AI 谈心助手：生成谈话提纲 */
+export async function fetchCounselingOutline(studentId: string): Promise<string> {
+  const { data } = await client.post('/counseling/outline', { studentId });
+  return data.outline;
+}
+
+/** AI 谈心助手：一句话描述 → 结构化谈心记录 */
+export async function summarizeCounseling(text: string, studentId?: string): Promise<{ content: string; followUp: string }> {
+  const { data } = await client.post('/counseling/summarize', { text, studentId });
+  return data;
+}
+
 export async function createCounseling(input: Partial<Counseling>): Promise<Counseling> {
   const { data } = await client.post('/counseling', input);
   return data.record;

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { HeartHandshake, Pencil, Plus, Trash2, Search, AlertTriangle } from 'lucide-react';
+import { HeartHandshake, Pencil, Plus, Trash2, Search, AlertTriangle, Sparkles } from 'lucide-react';
 import * as counselingApi from '../api/counseling';
 import { fetchStudents } from '../api/students';
 import type { Counseling, Student } from '../types';
@@ -355,6 +355,47 @@ function CounselingFormModal({
   const [content, setContent] = useState(editing?.content ?? '');
   const [followUp, setFollowUp] = useState(editing?.followUp ?? '');
   const [submitting, setSubmitting] = useState(false);
+  // AI 谈心助手
+  const [outline, setOutline] = useState('');
+  const [outlineLoading, setOutlineLoading] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [summarizing, setSummarizing] = useState(false);
+
+  const loadOutline = async () => {
+    if (!studentId) {
+      toast.error('请先选择学生');
+      return;
+    }
+    setOutlineLoading(true);
+    try {
+      const text = await counselingApi.fetchCounselingOutline(studentId);
+      setOutline(text);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '生成提纲失败';
+      toast.error(msg);
+    } finally {
+      setOutlineLoading(false);
+    }
+  };
+
+  const handleSummarize = async () => {
+    if (!draft.trim()) {
+      toast.error('请先输入谈话简述');
+      return;
+    }
+    setSummarizing(true);
+    try {
+      const result = await counselingApi.summarizeCounseling(draft.trim(), studentId || undefined);
+      setContent(result.content);
+      if (result.followUp) setFollowUp(result.followUp);
+      toast.success('已生成记录，可继续编辑后保存');
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '整理失败';
+      toast.error(msg);
+    } finally {
+      setSummarizing(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -412,6 +453,39 @@ function CounselingFormModal({
             placeholder="记录谈话要点、学生反映的问题等"
             required
           />
+        </div>
+
+        {/* AI 谈心助手 */}
+        <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-3 dark:border-violet-500/30 dark:bg-violet-500/5">
+          <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-violet-700 dark:text-violet-300">
+            <Sparkles className="h-3.5 w-3.5" /> AI 谈心助手
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" variant="ghost" onClick={loadOutline} disabled={outlineLoading || !studentId}>
+              <Sparkles className="mr-1 h-3.5 w-3.5" />
+              {outlineLoading ? '生成中...' : '✨ 生成谈话提纲'}
+            </Button>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Input
+                id="counseling-draft"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="输入一句话描述，AI 整理成记录"
+                className="flex-1"
+              />
+              <Button type="button" size="sm" variant="secondary" onClick={handleSummarize} disabled={summarizing}>
+                {summarizing ? '整理中...' : '整理'}
+              </Button>
+            </div>
+          </div>
+          {outline && (
+            <div className="mt-2 whitespace-pre-wrap rounded-md bg-white/70 p-2 text-xs leading-relaxed text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
+              {outline}
+            </div>
+          )}
+          <p className="mt-2 text-[11px] text-violet-500 dark:text-violet-400">
+            🔒 仅发送脱敏摘要（不包含证件号、手机号、住址、家长电话）
+          </p>
         </div>
         <div className="space-y-1.5">
           <label htmlFor="counseling-followup" className="block text-sm font-medium text-slate-700 dark:text-slate-300">后续跟进</label>

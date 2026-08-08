@@ -6,10 +6,20 @@ export interface StudentQueryResult {
 }
 
 /** 清理查询关键词：去掉常见尾缀（“的信息/的资料/的联系方式”等） */
-function cleanKeyword(kw: string): string {
+export function cleanKeyword(kw: string): string {
   return kw
     .replace(/(的?信息|的资料|的情况|的详细信息|的联系方式|的台账|详细信息|信息)$/g, '')
     .trim();
+}
+
+/**
+ * 从查询语句中提取学生关键词（纯函数，供 handleStudentQuery 与单元测试使用）。
+ * 多字前缀优先，避免「查一下张三」被裸「查」拆成「一下张三」。
+ */
+export function extractQueryKeyword(text: string): string | null {
+  const trimmed = text.trim();
+  const m = trimmed.match(/^(?:学生|我想查|帮我查|查一查|查一下|查查|查询|查找|查看|找一下|搜一下|搜索|查)\s*[:：]?\s*(.+)$/);
+  return m ? cleanKeyword(m[1]) : null;
 }
 
 /**
@@ -26,11 +36,8 @@ export async function handleStudentQuery(userId: string, text: string): Promise<
   }
 
   // 「学生 张三」「查一下张三」「查查张三」「查询李四」「张三的信息」→ 查询指定学生
-  // 注意：多字前缀必须放在「查」前面（正则从左到右匹配，避免「查一下张三」被拆成「一下张三」）
-  const directMatch = trimmed.match(/^(?:学生|我想查|帮我查|查一查|查一下|查查|查询|查找|查看|找一下|搜一下|搜索|查)\s*[:：]?\s*(.+)$/);
-  if (directMatch) {
-    const keyword = cleanKeyword(directMatch[1]);
-    if (!keyword) return null;
+  const keyword = extractQueryKeyword(trimmed);
+  if (keyword) {
     return await searchStudents(userId, keyword);
   }
 

@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authMiddleware } from '../middleware/auth.middleware';
 import * as settingsService from '../services/settings.service';
+import * as audit from '../services/audit.service';
 import { clearLLMCache } from '../services/llm.service';
 import { v4 as uuid } from 'uuid';
 import prisma from '../db';
@@ -111,6 +112,7 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
     if (mentalReportCollege !== undefined) {
       await settingsService.setSetting('mental_report_college', String(mentalReportCollege));
     }
+    await audit.log(req.userId!, 'settings_update', { ip: req.ip });
     const settings = await settingsService.getAllSettings();
     const imTokenKey = `im_user_${req.userId}`;
     res.json({

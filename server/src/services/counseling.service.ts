@@ -1,4 +1,5 @@
 import prisma from '../db';
+import * as audit from './audit.service';
 
 export interface CounselingInput {
   studentId: string;
@@ -28,7 +29,7 @@ export async function createCounseling(userId: string, input: CounselingInput) {
   // 校验学生属于该用户
   const student = await prisma.student.findFirst({ where: { id: input.studentId, userId } });
   if (!student) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
-  return prisma.counseling.create({
+  const record = await prisma.counseling.create({
     data: {
       userId,
       studentId: input.studentId,
@@ -39,6 +40,12 @@ export async function createCounseling(userId: string, input: CounselingInput) {
     },
     include: { student: { select: { id: true, name: true, className: true } } },
   });
+  await audit.log(userId, 'counseling_create', {
+    entityType: 'counseling',
+    entityId: record.id,
+    detail: `${student.name} 新增谈心（${record.type}）`,
+  });
+  return record;
 }
 
 export async function updateCounseling(userId: string, id: string, input: Partial<CounselingInput>) {
@@ -48,16 +55,28 @@ export async function updateCounseling(userId: string, id: string, input: Partia
   if (input.date) data.date = new Date(input.date);
   delete data.id;
   delete data.studentId; // 不允许改归属
-  return prisma.counseling.update({
+  const record = await prisma.counseling.update({
     where: { id },
     data,
     include: { student: { select: { id: true, name: true, className: true } } },
   });
+  await audit.log(userId, 'counseling_update', {
+    entityType: 'counseling',
+    entityId: id,
+    detail: `${record.student?.name || ''} 谈心记录修改`,
+  });
+  return record;
 }
 
 export async function deleteCounseling(userId: string, id: string) {
   const existing = await prisma.counseling.findFirst({ where: { id, userId } });
   if (!existing) throw Object.assign(new Error('记录不存在'), { statusCode: 404 });
+  const student = await prisma.student.findUnique({ where: { id: existing.studentId }, select: { name: true } });
+  await audit.log(userId, 'counseling_delete', {
+    entityType: 'counseling',
+    entityId: id,
+    detail: `${student?.name || ''} 谈心记录删除`,
+  });
   return prisma.counseling.delete({ where: { id } });
 }
 

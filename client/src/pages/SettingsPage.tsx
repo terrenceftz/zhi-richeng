@@ -15,6 +15,7 @@ import AccountCard from '../components/settings/AccountCard';
 import BackupCard from '../components/settings/BackupCard';
 import AboutCard from '../components/settings/AboutCard';
 import UsersCard from '../components/settings/UsersCard';
+import AuditLogCard from '../components/settings/AuditLogCard';
 
 interface SettingsData {
   hasDeepSeekKey: boolean;
@@ -148,6 +149,7 @@ export default function SettingsPage() {
 
       <div className="mt-6 max-w-[1100px] space-y-6">
         <UsersCard />
+        <AuditLogCard />
         <BackupCard />
         <AboutCard />
       </div>

@@ -4,6 +4,8 @@ import { authMiddleware } from '../middleware/auth.middleware';
 import * as mentalService from '../services/mental.service';
 import * as mentalAlert from '../services/mentalAlert.service';
 import * as llm from '../services/llm.service';
+import * as aiContext from '../services/aiContext.service';
+import * as audit from '../services/audit.service';
 import prisma from '../db';
 
 const router = Router();
@@ -42,41 +44,14 @@ router.get('/monthly-pending', async (req: Request, res: Response, next: NextFun
   }
 });
 
-// AI 台账智囊：基于档案 + 历史跟进记录生成下一步跟进建议
+// AI 台账智囊：基于档案 + 跟进/谈心记录 + 风险状态生成个性化跟进建议
+// 隐私：由 aiContext 白名单构造脱敏摘要（不发送证件号/手机号/住址/家长电话）
 router.post('/advice', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { studentId } = req.body;
     if (!studentId) return res.status(400).json({ message: '缺少 studentId' });
-    const student = await prisma.student.findFirst({ where: { id: studentId, userId: req.userId } });
-    if (!student) return res.status(404).json({ message: '学生不存在' });
-
-    const profile = await prisma.mentalProfile.findFirst({ where: { studentId, userId: req.userId } });
-    const records = await prisma.mentalRecord.findMany({
-      where: { studentId, userId: req.userId },
-      orderBy: { date: 'desc' },
-      take: 10,
-    });
-
-    const levelNames: Record<number, string> = { 1: '一级', 2: '二级', 3: '三级（最高）' };
-    const profileText = profile
-      ? [
-          `姓名：${student.name}（${student.studentNo || '无学号'}）`,
-          `班级：${student.className || '-'} / ${student.grade || '-'}`,
-          `关注级别：${levelNames[profile.concernLevel] || '一级'}`,
-          `类别：${(() => { try { return JSON.parse(profile.categories).join('、'); } catch { return '无'; } })()}`,
-          `是否经济困难：${profile.isPoverty ? '是' : '否'}`,
-          `纳入时间：${profile.includedAt ? new Date(profile.includedAt).toISOString().slice(0, 10) : '未填写'}，原因：${profile.includeReason || '未填写'}`,
-          `跟进人：${profile.followUpPerson || '未指定'}`,
-          `家长是否知情：${profile.parentInformed ? '是' : '否'}${profile.parentPhone ? `（${profile.parentPhone}）` : ''}`,
-          `备注：${profile.remark || '无'}`,
-        ].join('\n')
-      : `${student.name}（${student.studentNo || '无学号'}）暂无完整档案`;
-
-    const recordsText = records.length
-      ? records.map((r) => `【${new Date(r.date).toISOString().slice(0, 10)}】${r.situation}${r.action ? `；措施：${r.action}` : ''}`).join('\n')
-      : '暂无跟进记录';
-
-    const advice = await llm.mentalAdvice(profileText, recordsText);
+    const ctx = await aiContext.buildStudentAiContext(req.userId!, studentId);
+    const advice = await llm.mentalAdvice(ctx);
     res.json({ advice });
   } catch (err) {
     next(err);
@@ -137,6 +112,7 @@ router.get('/export', async (req: Request, res: Response, next: NextFunction) =>
     const ts = new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="mental-ledger-${ts}.xlsx"`);
+    await audit.log(req.userId!, 'export_mental', { ip: req.ip });
     res.send(buf);
   } catch (err) {
     next(err);
@@ -260,6 +236,7 @@ router.get('/export/report', async (req: Request, res: Response, next: NextFunct
     const filename = `华侨大学学生安全稳定工作台帐学院反馈汇总表（${year}年${month}月）.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    await audit.log(req.userId!, 'export_report', { ip: req.ip });
     res.send(buf);
   } catch (err) {
     next(err);

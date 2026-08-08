@@ -1,4 +1,5 @@
 import prisma from '../db';
+import * as audit from './audit.service';
 
 export interface StudentInput {
   name: string;
@@ -100,6 +101,11 @@ function buildCreateData(userId: string, input: StudentInput) {
 
 export async function createStudent(userId: string, input: StudentInput) {
   const s = await prisma.student.create({ data: buildCreateData(userId, input) });
+  await audit.log(userId, 'student_create', {
+    entityType: 'student',
+    entityId: s.id,
+    detail: `新增学生 ${s.name}`,
+  });
   return parseTags(s);
 }
 
@@ -109,6 +115,10 @@ export async function createStudentsBatch(userId: string, inputs: StudentInput[]
     const s = await prisma.student.create({ data: buildCreateData(userId, input) });
     created.push(parseTags(s));
   }
+  await audit.log(userId, 'student_import', {
+    entityType: 'student',
+    detail: `导入学生 ${created.length} 人`,
+  });
   return created;
 }
 
@@ -119,11 +129,22 @@ export async function updateStudent(userId: string, id: string, input: Partial<S
   if (input.birthDate !== undefined) data.birthDate = input.birthDate ? new Date(input.birthDate) : null;
   delete data.id;
   const s = await prisma.student.update({ where: { id }, data });
+  await audit.log(userId, 'student_update', {
+    entityType: 'student',
+    entityId: id,
+    detail: `修改学生 ${s.name}`,
+  });
   return parseTags(s);
 }
 
 export async function deleteStudent(userId: string, id: string) {
   await getStudentById(userId, id);
+  const s = await prisma.student.findUnique({ where: { id }, select: { name: true } });
+  await audit.log(userId, 'student_delete', {
+    entityType: 'student',
+    entityId: id,
+    detail: `删除学生 ${s?.name || ''}`,
+  });
   return prisma.student.delete({ where: { id } });
 }
 

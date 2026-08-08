@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
+import * as audit from '../services/audit.service';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -36,6 +37,7 @@ router.get('/', requireAdmin, async (_req: Request, res: Response, next: NextFun
     }
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const filename = `zhi-richeng-backup-${timestamp}.db`;
+    await audit.log(_req.userId!, 'backup_download', { ip: _req.ip });
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     fs.createReadStream(DB_PATH).pipe(res);
@@ -82,6 +84,7 @@ router.post('/restore', requireAdmin, upload.single('file'), async (req: Request
         try { fs.unlinkSync(path.join(backupDir, f)); } catch {}
       }
 
+      await audit.log(req.userId!, 'backup_restore', { ip: req.ip });
       res.json({ message: '数据恢复成功，服务器已使用新数据' });
     } catch (restoreErr) {
       // 回滚到安全备份

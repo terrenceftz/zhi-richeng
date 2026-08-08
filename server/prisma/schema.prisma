@@ -23,6 +23,7 @@ model User {
   counselings   Counseling[]
   mentalRecords MentalRecord[]
   mentalProfiles MentalProfile[]
+  auditLogs     AuditLog[]
 }
 
 model Task {
@@ -205,4 +206,20 @@ model ReminderLog {
 
   @@unique([taskId, key])
   @@index([taskId])
+}
+
+/// 审计日志：敏感操作留痕（登录/台账/学生/谈心/导出/备份/设置变更）
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action     String   // login | mental_toggle | profile_update | record_create | student_create | export_* | backup_* | settings_update ...
+  entityType String?  // student | mentalProfile | mentalRecord | counseling | notice | setting | task
+  entityId   String?
+  detail     String?  // 简要描述（JSON 或文本）
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action])
 }

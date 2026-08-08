@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import prisma from '../db';
+import * as audit from './audit.service';
 
 const CLEANUP_INTERVAL = 60 * 60 * 1000; // 每小时
 const KEEP_DAILY_BACKUPS = 7; // 自动备份保留最近 7 天
@@ -46,6 +47,8 @@ async function pruneExpiredTokens(): Promise<void> {
     // 同时清理 30 天前的 ReminderLog
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     await prisma.reminderLog.deleteMany({ where: { sentAt: { lt: cutoff } } });
+    // 清理 90 天前的审计日志
+    await audit.pruneOldLogs();
   } catch (err) {
     console.error('[清理] 失败:', err);
   }

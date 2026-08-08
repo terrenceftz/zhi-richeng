@@ -542,6 +542,9 @@ function FollowUpTimeline({ studentId, records, onChanged }: {
             <Sparkles className="h-3.5 w-3.5" /> AI 跟进建议
           </p>
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-200">{advice}</div>
+          <p className="mt-2 border-t border-violet-200 pt-1.5 text-[11px] leading-relaxed text-violet-500 dark:border-violet-500/20 dark:text-violet-400">
+            🔒 仅发送与关怀相关的脱敏摘要（姓名/班级/档案/跟进与谈心记录）；证件号、手机号、住址、家长电话等敏感信息不会发送。
+          </p>
         </div>
       )}
 

@@ -2,11 +2,43 @@ import { Router, Request, Response, NextFunction } from 'express';
 import * as XLSX from 'xlsx';
 import { authMiddleware } from '../middleware/auth.middleware';
 import * as counselingService from '../services/counseling.service';
+import * as audit from '../services/audit.service';
 import * as settingsService from '../services/settings.service';
+import * as llm from '../services/llm.service';
+import * as aiContext from '../services/aiContext.service';
 import prisma from '../db';
 
 const router = Router();
 router.use(authMiddleware);
+
+// AI 谈心助手：生成谈话提纲（谈心前）
+router.post('/outline', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { studentId } = req.body;
+    if (!studentId) return res.status(400).json({ message: '缺少 studentId' });
+    const ctx = await aiContext.buildStudentAiContext(req.userId!, studentId);
+    const outline = await llm.counselingOutline(ctx);
+    res.json({ outline });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// AI 谈心助手：把一句话描述整理成结构化谈心记录（谈后）
+router.post('/summarize', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { text, studentId } = req.body;
+    if (!text || typeof text !== 'string') return res.status(400).json({ message: '缺少 text 字段' });
+    let ctx: Awaited<ReturnType<typeof aiContext.buildStudentAiContext>> | undefined;
+    if (studentId) {
+      ctx = await aiContext.buildStudentAiContext(req.userId!, studentId).catch(() => undefined);
+    }
+    const result = await llm.counselingSummarize(text.trim(), ctx);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
 
 // 谈心记录 Excel 汇总导出
 router.get('/export/excel', async (req: Request, res: Response, next: NextFunction) => {

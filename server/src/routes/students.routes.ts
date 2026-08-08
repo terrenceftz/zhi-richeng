@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import * as XLSX from 'xlsx';
 import { authMiddleware } from '../middleware/auth.middleware';
 import * as studentsService from '../services/students.service';
+import * as audit from '../services/audit.service';
 import prisma from '../db';
 import multer from 'multer';
 
@@ -86,6 +87,7 @@ router.get('/export/excel', async (req: Request, res: Response, next: NextFuncti
     const ts = new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="students-roster-${ts}.xlsx"`);
+    await audit.log(req.userId!, 'export_roster', { ip: req.ip });
     res.send(buf);
   } catch (err) {
     next(err);

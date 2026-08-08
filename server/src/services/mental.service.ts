@@ -1,4 +1,5 @@
 import prisma from '../db';
+import * as audit from './audit.service';
 
 export interface MentalRecordInput {
   studentId: string;
@@ -41,8 +42,8 @@ function parseProfile(p: any) {
   return p;
 }
 
-/** 安全解析日期：兼容 YYYY-MM-DD、YYYY/M/D、Date、数字序列号；解析失败返回 null 而非抛错 */
-function parseDateSafe(raw: unknown): Date | null {
+/** 安全解析日期：兼容 YYYY-MM-DD、YYYY/M/D、中文日期、数字序列号；解析失败返回 null 而非抛错 */
+export function parseDateSafe(raw: unknown): Date | null {
   if (raw == null || raw === '') return null;
   if (raw instanceof Date) {
     return isNaN(raw.getTime()) ? null : raw;
@@ -109,6 +110,12 @@ export async function upsertProfile(userId: string, studentId: string, input: Me
     await prisma.student.update({ where: { id: studentId }, data: { isMentalTarget: true } });
   }
 
+  await audit.log(userId, 'profile_update', {
+    entityType: 'mentalProfile',
+    entityId: studentId,
+    detail: `${student.name} 档案更新（${data.concernLevel}级 / ${(input.categories || []).join('、')}）`,
+  });
+
   return parseProfile(profile);
 }
 
@@ -143,6 +150,11 @@ export async function toggleMentalTarget(userId: string, studentId: string, valu
       });
     }
   }
+  await audit.log(userId, 'mental_toggle', {
+    entityType: 'student',
+    entityId: studentId,
+    detail: `${student.name} ${value ? '标记为' : '移出'}心理台账`,
+  });
   return prisma.student.findUnique({ where: { id: studentId }, include: { mentalProfile: true } });
 }
 
@@ -191,6 +203,12 @@ export async function createRecord(userId: string, input: MentalRecordInput) {
     await prisma.student.update({ where: { id: input.studentId }, data: { isMentalTarget: true } });
   }
 
+  await audit.log(userId, 'record_create', {
+    entityType: 'mentalRecord',
+    entityId: record.id,
+    detail: `${student.name} 新增跟进`,
+  });
+
   return record;
 }
 
@@ -205,16 +223,28 @@ export async function updateRecord(userId: string, id: string, input: Partial<Me
   }
   if (data.date) data.date = parseDateSafe(data.date) || new Date();
   if (data.followUpDate !== undefined) data.followUpDate = parseDateSafe(data.followUpDate);
-  return prisma.mentalRecord.update({
+  const record = await prisma.mentalRecord.update({
     where: { id },
     data,
     include: { student: { select: { id: true, name: true, className: true, grade: true } } },
   });
+  await audit.log(userId, 'record_update', {
+    entityType: 'mentalRecord',
+    entityId: id,
+    detail: `${record.student?.name || ''} 跟进记录修改`,
+  });
+  return record;
 }
 
 export async function deleteRecord(userId: string, id: string) {
   const existing = await prisma.mentalRecord.findFirst({ where: { id, userId } });
   if (!existing) throw Object.assign(new Error('记录不存在'), { statusCode: 404 });
+  const student = await prisma.student.findUnique({ where: { id: existing.studentId }, select: { name: true } });
+  await audit.log(userId, 'record_delete', {
+    entityType: 'mentalRecord',
+    entityId: id,
+    detail: `${student?.name || ''} 跟进记录删除`,
+  });
   return prisma.mentalRecord.delete({ where: { id } });
 }
 

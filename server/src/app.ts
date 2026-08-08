@@ -16,6 +16,7 @@ import noticesRoutes from './routes/notices.routes';
 import mentalRoutes from './routes/mental.routes';
 import statsRoutes from './routes/stats.routes';
 import bingRoutes from './routes/bing.routes';
+import auditRoutes from './routes/audit.routes';
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/notices', noticesRoutes);
 app.use('/api/mental', mentalRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/bing-wallpaper', bingRoutes);
+app.use('/api/audit', auditRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
