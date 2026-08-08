@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { LayoutDashboard, Calendar, Lightbulb, Settings, LogOut, GraduationCap, Bell, Heart, BarChart3, HeartHandshake, FileSpreadsheet, BookOpenText } from 'lucide-react';
+import { LayoutDashboard, Calendar, Lightbulb, Settings, LogOut, GraduationCap, Bell, Heart, BarChart3, HeartHandshake, FileSpreadsheet, BookOpenText, ShieldCheck, Building2 } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import Badge from '../ui/Badge';
 
@@ -89,8 +89,16 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{user?.name || '用户'}</p>
-              {user?.role === 'admin' && <Badge tone="brand">系统管理员</Badge>}
-              {user?.role === 'dept_admin' && <Badge tone="blue">院系管理员</Badge>}
+              {user?.role === 'admin' && (
+                <span title="系统管理员" aria-label="系统管理员" className="flex items-center">
+                  <Badge tone="brand" className="!px-1 !py-0.5"><ShieldCheck className="h-3.5 w-3.5" /></Badge>
+                </span>
+              )}
+              {user?.role === 'dept_admin' && (
+                <span title="院系管理员" aria-label="院系管理员" className="flex items-center">
+                  <Badge tone="blue" className="!px-1 !py-0.5"><Building2 className="h-3.5 w-3.5" /></Badge>
+                </span>
+              )}
             </div>
             <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
           </div>
