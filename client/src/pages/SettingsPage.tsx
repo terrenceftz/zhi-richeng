@@ -88,87 +88,75 @@ export default function SettingsPage() {
         设置
       </h2>
 
+      {/* 全部设置卡共用一个 2 列网格：grid 自动按行成对填充，每行严格等高对齐 */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div className="space-y-6">
-          <DeepSeekCard
-            hasKey={data.hasDeepSeekKey}
-            envConfigured={data.envConfigured}
-            onSave={async (key) => { await put({ deepseekApiKey: key }); set('hasDeepSeekKey', !!key); }}
-          />
-          <IMWebhookCard webhookUrl={data.webhookUrl} imToken={data.imToken} />
-          <FeishuCard
-            feishuAppId={data.feishuAppId} feishuAppSecret={data.feishuAppSecret}
-            feishuConfigured={data.feishuConfigured} feishuConnected={data.feishuConnected}
-            feishuOpenId={data.feishuOpenId}
-            onSave={async (appId, secret) => {
-              await put({ feishuAppId: appId, feishuAppSecret: secret });
-              set('feishuConfigured', true);
-            }}
-            onBindOpenId={async (openId) => { await put({ feishuOpenId: openId }); set('feishuOpenId', openId); }}
-          />
-          <AccountCard
-            email={user?.email || ''} name={profileName}
-            onSave={async (name, password, oldPassword) => {
-              const body: Record<string, string> = {};
-              if (name) body.name = name;
-              if (password) {
-                body.password = password;
-                body.oldPassword = oldPassword;
-              }
-              await client.put('/users/me', body);
-              toast.success('个人信息已更新');
-            }}
-          />
-        </div>
+        <DeepSeekCard
+          hasKey={data.hasDeepSeekKey}
+          envConfigured={data.envConfigured}
+          onSave={async (key) => { await put({ deepseekApiKey: key }); set('hasDeepSeekKey', !!key); }}
+        />
+        <SemesterCard
+          name={data.semesterName} start={data.semesterStart} end={data.semesterEnd}
+          onSave={async (name, start, end) => { await put({ semesterName: name, semesterStart: start, semesterEnd: end }); }}
+        />
+        <IMWebhookCard webhookUrl={data.webhookUrl} imToken={data.imToken} />
+        <Card>
+          <h3 className="mb-1 text-base font-semibold text-slate-900 dark:text-slate-100">报送学院</h3>
+          <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">心理台账月度报送表（每月 15 号）中的「学院」列</p>
+          <div className="space-y-3">
+            <Input
+              label="学院名称"
+              value={data.mentalReportCollege}
+              onChange={(e) => set('mentalReportCollege', e.target.value)}
+              placeholder="如：华侨大学法学院"
+              hint="导出报送表时自动填入「学院」列"
+            />
+            <Button size="sm" onClick={async () => { await put({ mentalReportCollege: data.mentalReportCollege }); }}>
+              保存
+            </Button>
+          </div>
+        </Card>
+        <FeishuCard
+          feishuAppId={data.feishuAppId} feishuAppSecret={data.feishuAppSecret}
+          feishuConfigured={data.feishuConfigured} feishuConnected={data.feishuConnected}
+          feishuOpenId={data.feishuOpenId}
+          onSave={async (appId, secret) => {
+            await put({ feishuAppId: appId, feishuAppSecret: secret });
+            set('feishuConfigured', true);
+          }}
+          onBindOpenId={async (openId) => { await put({ feishuOpenId: openId }); set('feishuOpenId', openId); }}
+        />
+        <ReminderCard
+          enabled={data.reminderEnabled} minutes={data.reminderMinutes}
+          onToggle={async (enabled) => { set('reminderEnabled', enabled); await put({ reminderEnabled: enabled }); }}
+          onSaveMinutes={async (m) => { set('reminderMinutes', m); await put({ reminderMinutes: m }); }}
+        />
+        <AccountCard
+          email={user?.email || ''} name={profileName}
+          onSave={async (name, password, oldPassword) => {
+            const body: Record<string, string> = {};
+            if (name) body.name = name;
+            if (password) {
+              body.password = password;
+              body.oldPassword = oldPassword;
+            }
+            await client.put('/users/me', body);
+            toast.success('个人信息已更新');
+          }}
+        />
 
-        <div className="space-y-6">
-          <SemesterCard
-            name={data.semesterName} start={data.semesterStart} end={data.semesterEnd}
-            onSave={async (name, start, end) => { await put({ semesterName: name, semesterStart: start, semesterEnd: end }); }}
-          />
-          <Card>
-            <h3 className="mb-1 text-base font-semibold text-slate-900 dark:text-slate-100">报送学院</h3>
-            <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">心理台账月度报送表（每月 15 号）中的「学院」列</p>
-            <div className="space-y-3">
-              <Input
-                label="学院名称"
-                value={data.mentalReportCollege}
-                onChange={(e) => set('mentalReportCollege', e.target.value)}
-                placeholder="如：华侨大学法学院"
-                hint="导出报送表时自动填入「学院」列"
-              />
-              <Button size="sm" onClick={async () => { await put({ mentalReportCollege: data.mentalReportCollege }); }}>
-                保存
-              </Button>
-            </div>
-          </Card>
-          <ReminderCard
-            enabled={data.reminderEnabled} minutes={data.reminderMinutes}
-            onToggle={async (enabled) => { set('reminderEnabled', enabled); await put({ reminderEnabled: enabled }); }}
-            onSaveMinutes={async (m) => { set('reminderMinutes', m); await put({ reminderMinutes: m }); }}
-          />
-        </div>
-      </div>
-
-      {/* 系统管理（仅系统管理员） */}
-      {user?.role === 'admin' && (
-        <div className="mt-8">
-          <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        {/* 系统管理分区标题：横跨整行 */}
+        {user?.role === 'admin' && (
+          <h3 className="col-span-1 mt-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 xl:col-span-2">
             <ShieldCheck className="h-4 w-4 text-brand-500" />
             系统管理
           </h3>
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <UsersCard />
-            <AuditLogCard />
-            <div className="xl:col-span-2">
-              <BackupCard />
-            </div>
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* 关于 */}
-      <div className="mt-8">
+        {user?.role === 'admin' && <UsersCard />}
+        {user?.role === 'admin' && <AuditLogCard />}
+        {user?.role === 'admin' && <BackupCard />}
+
         <AboutCard />
       </div>
     </div>
