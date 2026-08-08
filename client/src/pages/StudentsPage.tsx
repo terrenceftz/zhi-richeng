@@ -101,7 +101,7 @@ export default function StudentsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, className, grade, mentalOnly]);
+  }, [q, className, grade, mentalOnly, statusFilter]);
 
   // 翻页
   const goToPage = (p: number) => {
