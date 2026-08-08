@@ -7,6 +7,14 @@ import * as audit from '../services/audit.service';
 const router = Router();
 router.use(authMiddleware);
 
+/** 周期提醒为全局广播数据，增删改限系统管理员/院系管理员 */
+function requireManager(req: Request, res: Response, next: NextFunction) {
+  if (!['admin', 'dept_admin'].includes(req.userRole || '')) {
+    return res.status(403).json({ message: '需要系统管理员或院系管理员权限' });
+  }
+  next();
+}
+
 /** 内置心理报送项实际配置从 settings 读取（保持与设置页一致） */
 async function hydrateBuiltin(item: any): Promise<any> {
   const settings = await settingsService.getAllSettings();
@@ -30,7 +38,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requireManager, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { title, cycleType, time, weekdays, dayOfMonth, content } = req.body;
     if (!title || !cycleType || !time) {
@@ -59,7 +67,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', requireManager, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const existing = await prisma.recurringReminder.findUnique({ where: { id } });
@@ -106,7 +114,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', requireManager, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const existing = await prisma.recurringReminder.findUnique({ where: { id } });
@@ -120,7 +128,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
-router.post('/:id/toggle', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/:id/toggle', requireManager, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const existing = await prisma.recurringReminder.findUnique({ where: { id } });

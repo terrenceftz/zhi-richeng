@@ -18,9 +18,9 @@ export function signRefreshToken(payload: TokenPayload): string {
 }
 
 export function verifyAccessToken(token: string): TokenPayload {
-  return jwt.verify(token, config.jwt.accessSecret) as TokenPayload;
+  return jwt.verify(token, config.jwt.accessSecret, { algorithms: ['HS256'] }) as TokenPayload;
 }
 
 export function verifyRefreshToken(token: string): TokenPayload {
-  return jwt.verify(token, config.jwt.refreshSecret) as TokenPayload;
+  return jwt.verify(token, config.jwt.refreshSecret, { algorithms: ['HS256'] }) as TokenPayload;
 }

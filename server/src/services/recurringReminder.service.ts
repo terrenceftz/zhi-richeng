@@ -122,8 +122,8 @@ async function pushText(users: any[], reminder: any, key: string): Promise<void>
   for (const u of users) {
     const openId = await settingsService.getSetting(`feishu_openid_${u.id}`);
     if (!openId) continue;
-    await feishuService.sendReminder(openId, msg);
-    pushed = true;
+    const ok = await feishuService.sendReminder(openId, msg);
+    if (ok) pushed = true;
   }
   if (pushed) {
     await markSent(reminder.id, key);
@@ -158,8 +158,8 @@ async function pushMentalReport(users: any[], reminder: any, now: Date, key: str
       `💡 如已完成请忽略；可在「心理台账」页面查看详情`,
     ].join('\n');
 
-    await feishuService.sendReminder(openId, msg);
-    pushed = true;
+    const ok = await feishuService.sendReminder(openId, msg);
+    if (ok) pushed = true;
   }
 
   if (pushed) {

@@ -82,8 +82,8 @@ async function checkAndRemind(): Promise<void> {
       ].filter(Boolean).join('\n');
 
       console.log(`[提醒] 发送提醒: ${task.title} (${task.dueTime}) -> ${openId}`);
-      await feishuService.sendReminder(openId, msg);
-      await markSent(task.id, dedupeKey);
+      const ok = await feishuService.sendReminder(openId, msg);
+      if (ok) await markSent(task.id, dedupeKey);
     }
 
     // 逾期即时提醒：任务刚过期（事件时间在过去 0~5 分钟内）时发一条
@@ -118,8 +118,8 @@ async function checkAndRemind(): Promise<void> {
       ].filter(Boolean).join('\n');
 
       console.log(`[提醒] 发送逾期提醒: ${task.title} -> ${openId}`);
-      await feishuService.sendReminder(openId, msg);
-      await markSent(task.id, overdueKey);
+      const ok = await feishuService.sendReminder(openId, msg);
+      if (ok) await markSent(task.id, overdueKey);
     }
   } catch (err) {
     console.error('[提醒] 检查失败:', err);

@@ -87,11 +87,14 @@ async function checkAndDigest(): Promise<void> {
         : '';
       const msg = `☀️ 今日日程简报\n\n${summary}${overdueSection}`;
 
-      await sendReminder(openId, msg);
-      try {
-        await prisma.reminderLog.create({ data: { taskId: user.id, key: `digest_${today}` } });
-      } catch {
-        // 唯一约束冲突 = 已记录，忽略
+      // 发送成功才写去重记录；失败保留补发机会（下次轮询重试）
+      const ok = await sendReminder(openId, msg);
+      if (ok) {
+        try {
+          await prisma.reminderLog.create({ data: { taskId: user.id, key: `digest_${today}` } });
+        } catch {
+          // 唯一约束冲突 = 已记录，忽略
+        }
       }
     }
   } catch (err) {
@@ -135,9 +138,16 @@ ${taskList}
   }
 }
 
+/** Date 转本地时区 YYYY-MM-DD（任务 dueDate 为 Date，直接 slice 会得到 undefined） */
+function localDateStr(d: Date | null | undefined): string {
+  if (!d) return '';
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
+}
+
 function buildSimpleSummary(tasks: any[], _today: string): string {
   const high = tasks.filter((t) => t.priority === 'high').length;
-  const todayTasks = tasks.filter((t) => t.dueDate?.slice(0, 10) === _today);
+  const todayTasks = tasks.filter((t) => localDateStr(t.dueDate) === _today);
 
   const lines = [
     `📊 共 ${tasks.length} 个任务，其中 ${high} 个高优先级`,

@@ -247,12 +247,12 @@ function scheduleReconnect(): void {
   }, 30_000);
 }
 
-export async function sendReminder(openId: string, text: string): Promise<void> {
+export async function sendReminder(openId: string, text: string): Promise<boolean> {
   const settings = await settingsService.getAllSettings();
   const appId = settings.feishu_app_id || process.env.FEISHU_APP_ID || '';
   const appSecret = settings.feishu_app_secret || process.env.FEISHU_APP_SECRET || '';
 
-  if (!appId || !appSecret) return;
+  if (!appId || !appSecret) return false;
 
   const client = new Lark.Client({ appId, appSecret, disableTokenCache: false });
 
@@ -266,8 +266,10 @@ export async function sendReminder(openId: string, text: string): Promise<void> 
       },
     });
     console.log('[飞书] 提醒发送成功:', text.slice(0, 60));
+    return true;
   } catch (err) {
     console.error('[飞书] 提醒发送失败:', err);
+    return false;
   }
 }
 

@@ -101,11 +101,13 @@ export default function SettingsPage() {
           onSave={async (key) => { await put({ deepseekApiKey: key }); set('hasDeepSeekKey', !!key); }}
         />
         <SemesterCard
+          key={`${data.semesterName}|${data.semesterStart}|${data.semesterEnd}`}
           name={data.semesterName} start={data.semesterStart} end={data.semesterEnd}
           onSave={async (name, start, end) => { await put({ semesterName: name, semesterStart: start, semesterEnd: end }); }}
         />
         <IMWebhookCard webhookUrl={data.webhookUrl} imToken={data.imToken} />
         <FeishuCard
+          key={`${data.feishuOpenId}|${data.feishuAppId}`}
           feishuAppId={data.feishuAppId} feishuAppSecret={data.feishuAppSecret}
           feishuConfigured={data.feishuConfigured} feishuConnected={data.feishuConnected}
           feishuOpenId={data.feishuOpenId}
@@ -127,6 +129,7 @@ export default function SettingsPage() {
           onToggleAi={async (ai) => { set('digestAi', ai); await put({ digestAi: ai }); }}
         />
         <AccountCard
+          key={profileName || 'me'}
           email={user?.email || ''} name={profileName}
           onSave={async (name, password, oldPassword) => {
             const body: Record<string, string> = {};

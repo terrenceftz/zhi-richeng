@@ -14,13 +14,14 @@ const STATUS_LABEL: Record<string, string> = { active: '在学', suspended: '休
  */
 export async function handleStudentStatusChange(userId: string, text: string): Promise<string | null> {
   const trimmed = text.trim();
-  // 触发关键词
-  const m = trimmed.match(/(.+?)\s*(?:办|办理|申请)?\s*(休学|复学|毕业|退学)/);
+  // 触发关键词：动作词必须在句尾（排除「毕业后去哪」等非指令表达），支持「张三 休学」「休学 张三」「给张三办休学」
+  const m = trimmed.match(/^(?:给|为|向)?\s*(.+?)\s*(休学|复学|毕业|退学)\s*[。！!]?\s*$/)
+    || trimmed.match(/^(休学|复学|毕业|退学)\s+(.+?)\s*[。！!]?\s*$/);
   if (!m) return null;
 
-  const action = m[2];
-  const studentName = m[1].replace(/^(给|为|向)/, '').trim();
-  if (!studentName) return null;
+  const action = m[2] || m[1];
+  const studentName = (m[1] || m[2]).replace(/^(给|为|向)/, '').trim();
+  if (!studentName || !['休学', '复学', '毕业', '退学'].includes(action)) return null;
 
   // 构建可见范围（本学院）
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, college: true } });

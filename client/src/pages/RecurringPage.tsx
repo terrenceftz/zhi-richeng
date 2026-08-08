@@ -8,6 +8,7 @@ import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import { Select } from '../components/ui/Input';
 import { useToastStore } from '../stores/toastStore';
+import { useAuthStore } from '../stores/authStore';
 
 interface RecurringReminder {
   id: string;
@@ -49,6 +50,8 @@ function describe(item: RecurringReminder): string {
 
 export default function RecurringPage() {
   const toast = useToastStore();
+  const { user } = useAuthStore();
+  const canManage = user?.role === 'admin' || user?.role === 'dept_admin';
   const [items, setItems] = useState<RecurringReminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<RecurringReminder | null>(null);
@@ -98,9 +101,11 @@ export default function RecurringPage() {
           <Repeat className="h-6 w-6 text-brand-500" />
           周期任务
         </h2>
-        <Button size="sm" onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" /> 新建周期提醒
-        </Button>
+        {canManage && (
+          <Button size="sm" onClick={() => setCreating(true)}>
+            <Plus className="h-4 w-4" /> 新建周期提醒
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -128,15 +133,17 @@ export default function RecurringPage() {
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
-                  <Switch checked={item.enabled} onChange={() => toggle(item)} label="启用" />
-                  <button
-                    onClick={() => setEditing(item)}
-                    aria-label="编辑"
-                    className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  {!item.builtin && (
+                  {canManage && <Switch checked={item.enabled} onChange={() => toggle(item)} label="启用" />}
+                  {canManage && (
+                    <button
+                      onClick={() => setEditing(item)}
+                      aria-label="编辑"
+                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  )}
+                  {canManage && !item.builtin && (
                     <button
                       onClick={() => remove(item)}
                       aria-label="删除"

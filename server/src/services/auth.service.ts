@@ -41,7 +41,24 @@ function issueTokens(userId: string, role: string): TokenPair {
 }
 
 export async function register(input: RegisterInput): Promise<{ user: PublicUser; tokens: TokenPair }> {
-  const existing = await prisma.user.findUnique({ where: { email: input.email } });
+  // 注册开关：关闭时拒绝注册（后端强制，前端仅展示）
+  const regSetting = await prisma.setting.findUnique({ where: { key: 'registration_enabled' } });
+  if (regSetting?.value === 'false') {
+    throw Object.assign(new Error('注册已关闭，请联系管理员开通'), { statusCode: 403 });
+  }
+  // 邮箱规范化 + 基础校验
+  const email = String(input.email || '').toLowerCase().trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw Object.assign(new Error('邮箱格式不正确'), { statusCode: 400 });
+  }
+  if (!input.name || typeof input.name !== 'string') {
+    throw Object.assign(new Error('缺少姓名'), { statusCode: 400 });
+  }
+  if (typeof input.password !== 'string' || input.password.length < 6) {
+    throw Object.assign(new Error('密码长度至少 6 位'), { statusCode: 400 });
+  }
+
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     throw Object.assign(new Error('邮箱已被注册'), { statusCode: 409 });
   }
@@ -52,7 +69,7 @@ export async function register(input: RegisterInput): Promise<{ user: PublicUser
   const user = await prisma.$transaction(async (tx) => {
     const userCount = await tx.user.count();
     const created = await tx.user.create({
-      data: { email: input.email, password: hashed, name: input.name, role: userCount === 0 ? 'admin' : 'user' },
+      data: { email, password: hashed, name: String(input.name).slice(0, 50), role: userCount === 0 ? 'admin' : 'user' },
       select: { id: true, email: true, name: true, role: true, college: true },
     });
     const pair = issueTokens(created.id, created.role);
@@ -70,7 +87,7 @@ export async function register(input: RegisterInput): Promise<{ user: PublicUser
 }
 
 export async function login(input: LoginInput): Promise<{ user: PublicUser; tokens: TokenPair }> {
-  const user = await prisma.user.findUnique({ where: { email: input.email } });
+  const user = await prisma.user.findUnique({ where: { email: String(input.email || '').toLowerCase().trim() } });
   if (!user) {
     throw Object.assign(new Error('邮箱或密码错误'), { statusCode: 401 });
   }

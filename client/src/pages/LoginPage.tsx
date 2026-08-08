@@ -9,15 +9,13 @@ import Input from '../components/ui/Input';
 import Switch from '../components/ui/Switch';
 
 const EMAIL_KEY = 'rememberedEmail';
-const PASSWORD_KEY = 'rememberedPassword';
 
 export default function LoginPage() {
-  // 首次渲染时直接读取上次记住的凭据
+  // 首次渲染时直接读取上次记住的账号（不记住密码，避免明文落盘）
   const [email, setEmail] = useState(() => localStorage.getItem(EMAIL_KEY) ?? '');
-  const [password, setPassword] = useState(() => localStorage.getItem(PASSWORD_KEY) ?? '');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberAccount, setRememberAccount] = useState(() => !!localStorage.getItem(EMAIL_KEY));
-  const [rememberPassword, setRememberPassword] = useState(() => !!localStorage.getItem(PASSWORD_KEY));
   const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
   const toast = useToastStore();
   const navigate = useNavigate();
@@ -32,22 +30,14 @@ export default function LoginPage() {
     else localStorage.removeItem(EMAIL_KEY);
   };
 
-  const handleRememberPassword = (checked: boolean) => {
-    setRememberPassword(checked);
-    if (checked && password) localStorage.setItem(PASSWORD_KEY, password);
-    else localStorage.removeItem(PASSWORD_KEY);
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     clearError();
     try {
       await login(email, password);
-      // 登录成功后按开关持久化/清除记住的凭据
+      // 登录成功后按开关持久化/清除记住的账号（密码由浏览器密码管理器负责，不落明文）
       if (rememberAccount && email) localStorage.setItem(EMAIL_KEY, email);
       else localStorage.removeItem(EMAIL_KEY);
-      if (rememberPassword && password) localStorage.setItem(PASSWORD_KEY, password);
-      else localStorage.removeItem(PASSWORD_KEY);
       navigate('/', { replace: true });
     } catch {
       /* 错误已在 store 中 */
@@ -101,20 +91,13 @@ export default function LoginPage() {
           }
         />
 
-        <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300">记住账号</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">下次打开自动填充登录邮箱</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">下次打开自动填充登录邮箱（密码由浏览器保存）</p>
             </div>
             <Switch checked={rememberAccount} onChange={handleRememberAccount} label="记住账号" />
-          </div>
-          <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-2 dark:border-slate-800">
-            <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">记住密码</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">仅在个人设备上启用</p>
-            </div>
-            <Switch checked={rememberPassword} onChange={handleRememberPassword} label="记住密码" />
           </div>
         </div>
 

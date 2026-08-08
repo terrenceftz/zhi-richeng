@@ -70,13 +70,17 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, digestEnabled, digestHour, digestAi, regEnabled, semesterName, semesterStart, semesterEnd, mentalReportCollege, mentalReportDay, mentalReportEnabled, mentalReportSkipMonths } = req.body;
 
-    // 系统级字段（影响全局）必须管理员：飞书凭证、注册开关、学期、DeepSeek Key、报送学院
-    const systemFields = ['feishuAppId', 'feishuAppSecret', 'regEnabled', 'semesterName', 'semesterStart', 'semesterEnd', 'deepseekApiKey', 'mentalReportCollege'];
+    // 系统级字段（影响全局）必须管理员：飞书凭证、注册开关、学期、DeepSeek Key、报送学院、提醒/简报/报送配置
+    const systemFields = [
+      'feishuAppId', 'feishuAppSecret', 'regEnabled', 'semesterName', 'semesterStart', 'semesterEnd', 'deepseekApiKey', 'mentalReportCollege',
+      'reminderMinutes', 'reminderEnabled', 'digestEnabled', 'digestHour', 'digestAi',
+      'mentalReportDay', 'mentalReportEnabled', 'mentalReportSkipMonths',
+    ];
     const wantsSystem = systemFields.some((f) => req.body[f] !== undefined);
     if (wantsSystem) {
       const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true } });
       if (!user || user.role !== 'admin') {
-        return res.status(403).json({ message: '修改系统配置（飞书凭证/注册开关/学期/API Key）需要管理员权限' });
+        return res.status(403).json({ message: '修改系统配置（提醒/简报/报送等全局设置）需要管理员权限' });
       }
     }
 
@@ -85,8 +89,18 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
       clearLLMCache();
     }
     if (feishuOpenId !== undefined) {
+      // 绑定飞书 OpenID：防止覆盖他人已绑定的 OpenID（反向索引冲突则拒绝，避免消息路由劫持）
+      if (feishuOpenId) {
+        const owner = await settingsService.getSetting(`feishu_userid_${feishuOpenId}`);
+        if (owner && owner !== req.userId) {
+          return res.status(400).json({ message: '该飞书 OpenID 已绑定其他账号，请勿重复绑定' });
+        }
+      }
+      const oldOpenId = await settingsService.getSetting(`feishu_openid_${req.userId}`);
+      if (oldOpenId && oldOpenId !== feishuOpenId) {
+        await settingsService.setSetting(`feishu_userid_${oldOpenId}`, '');
+      }
       await settingsService.setSetting(`feishu_openid_${req.userId}`, feishuOpenId);
-      // 维护 openId -> userId 反向索引（飞书消息路由用）
       if (feishuOpenId) {
         await settingsService.setSetting(`feishu_userid_${feishuOpenId}`, req.userId!);
       }

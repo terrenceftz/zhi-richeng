@@ -55,10 +55,12 @@ export async function log(userId: string, action: AuditAction, opts: AuditLogOpt
 }
 
 export async function getLogs(
-  userId: string,
-  opts: { action?: string; page?: number; pageSize?: number } = {}
+  currentUserId: string,
+  opts: { action?: string; userId?: string; page?: number; pageSize?: number } = {}
 ): Promise<{ logs: any[]; total: number }> {
-  const where: any = { userId };
+  // 管理员经 audit.routes 调用：不传 userId 即查看全部（普通用户不会走到此接口）
+  const where: any = {};
+  if (opts.userId) where.userId = opts.userId;
   if (opts.action) where.action = opts.action;
   const page = opts.page || 1;
   const pageSize = opts.pageSize || 50;

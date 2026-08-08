@@ -103,6 +103,9 @@ export async function getStudentById(ctx: UserCtx, id: string) {
 }
 
 function buildCreateData(ctx: UserCtx, input: StudentInput) {
+  // 学院归属：普通用户强制使用自己的学院；仅 admin/dept_admin 可显式指定
+  const canSpecifyCollege = isAdmin(ctx.role) || ctx.role === 'dept_admin';
+  const college = canSpecifyCollege ? (input.college || ctx.college || '') : (ctx.college || '');
   return {
     userId: ctx.userId!,
     name: input.name,
@@ -120,8 +123,7 @@ function buildCreateData(ctx: UserCtx, input: StudentInput) {
     tags: JSON.stringify(input.tags || []),
     remark: input.remark || null,
     extras: JSON.stringify(input.extras || {}),
-    // 学生归属学院：默认当前用户学院；管理员/院系管理员可显式指定
-    college: input.college || ctx.college || '',
+    college,
   };
 }
 
@@ -172,7 +174,11 @@ export async function updateStudent(ctx: UserCtx, id: string, input: Partial<Stu
     throw Object.assign(new Error('不在籍学生已封存，仅可查询，不可编辑'), { statusCode: 403 });
   }
 
-  const s = await prisma.student.update({ where: { id }, data: buildUpdateData(input) });
+  const data = buildUpdateData(input);
+  // 学院归属：仅系统管理员可改；院系管理员/普通用户不得改写（防越权移出本学院共享范围）
+  if (!isAdmin(ctx.role)) delete data.college;
+
+  const s = await prisma.student.update({ where: { id }, data });
   await audit.log(ctx.userId!, 'student_update', {
     entityType: 'student',
     entityId: id,
@@ -249,7 +255,9 @@ export async function upsertStudents(ctx: UserCtx, inputs: StudentInput[]): Prom
     }
 
     if (existing) {
-      await prisma.student.update({ where: { id: existing.id }, data: buildUpdateData(input) });
+      const data = buildUpdateData(input);
+      if (!isAdmin(ctx.role)) delete data.college; // 普通用户导入不得改学院归属
+      await prisma.student.update({ where: { id: existing.id }, data });
       result.updated++;
     } else {
       await prisma.student.create({ data: buildCreateData(ctx, input) });
