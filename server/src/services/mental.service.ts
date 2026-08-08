@@ -1,5 +1,6 @@
 import prisma from '../db';
 import * as audit from './audit.service';
+import { visibleStudentWhere, canManageRecord, type UserCtx } from '../utils/scope';
 
 export interface MentalRecordInput {
   studentId: string;
@@ -70,13 +71,13 @@ export function parseDateSafe(raw: unknown): Date | null {
 
 // ================= 台账档案 =================
 
-/** 创建/更新台账档案（按 studentId upsert） */
-export async function upsertProfile(userId: string, studentId: string, input: MentalProfileInput) {
-  const student = await prisma.student.findFirst({ where: { id: studentId, userId } });
+/** 创建/更新台账档案（按 studentId upsert；同学院共同维护） */
+export async function upsertProfile(ctx: UserCtx, studentId: string, input: MentalProfileInput) {
+  const student = await prisma.student.findFirst({ where: { ...visibleStudentWhere(ctx), id: studentId } });
   if (!student) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
 
   const data: any = {
-    userId,
+    userId: ctx.userId!,
     studentId,
     isPoverty: input.isPoverty ?? false,
     concernLevel: Math.min(3, Math.max(1, input.concernLevel || 1)),
@@ -111,7 +112,7 @@ export async function upsertProfile(userId: string, studentId: string, input: Me
       : [prisma.student.update({ where: { id: studentId }, data: { isMentalTarget: true } })]),
   ]);
 
-  await audit.log(userId, 'profile_update', {
+  await audit.log(ctx.userId!, 'profile_update', {
     entityType: 'mentalProfile',
     entityId: studentId,
     detail: `${student.name} 档案更新（${data.concernLevel}级 / ${(input.categories || []).join('、')}）`,
@@ -120,10 +121,10 @@ export async function upsertProfile(userId: string, studentId: string, input: Me
   return parseProfile(profile);
 }
 
-/** 台账学生列表（带档案 + 记录数） */
-export async function getMentalStudents(userId: string) {
+/** 台账学生列表（带档案 + 记录数；可见范围） */
+export async function getMentalStudents(ctx: UserCtx) {
   const students = await prisma.student.findMany({
-    where: { userId, isMentalTarget: true },
+    where: { ...visibleStudentWhere(ctx), isMentalTarget: true },
     orderBy: [{ mentalProfile: { concernLevel: 'desc' } }, { name: 'asc' }],
     include: {
       mentalProfile: true,
@@ -137,8 +138,8 @@ export async function getMentalStudents(userId: string) {
 }
 
 /** 切换学生台账标记；标记时自动建档 */
-export async function toggleMentalTarget(userId: string, studentId: string, value: boolean) {
-  const student = await prisma.student.findFirst({ where: { id: studentId, userId } });
+export async function toggleMentalTarget(ctx: UserCtx, studentId: string, value: boolean) {
+  const student = await prisma.student.findFirst({ where: { ...visibleStudentWhere(ctx), id: studentId } });
   if (!student) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
 
   // 标记 + 自动建档（upsert 防并发 P2002）：同一事务
@@ -147,13 +148,13 @@ export async function toggleMentalTarget(userId: string, studentId: string, valu
     ...(value
       ? [prisma.mentalProfile.upsert({
           where: { studentId },
-          create: { userId, studentId, isPoverty: false, concernLevel: 1, categories: '["心理健康"]' },
+          create: { userId: ctx.userId!, studentId, isPoverty: false, concernLevel: 1, categories: '["心理健康"]' },
           update: {},
         })]
       : []),
   ]);
 
-  await audit.log(userId, 'mental_toggle', {
+  await audit.log(ctx.userId!, 'mental_toggle', {
     entityType: 'student',
     entityId: studentId,
     detail: `${student.name} ${value ? '标记为' : '移出'}心理台账`,
@@ -163,8 +164,8 @@ export async function toggleMentalTarget(userId: string, studentId: string, valu
 
 // ================= 跟进记录 =================
 
-export async function getRecords(userId: string, filters: { studentId?: string; status?: string; level?: string }) {
-  const where: any = { userId };
+export async function getRecords(ctx: UserCtx, filters: { studentId?: string; status?: string; level?: string }) {
+  const where: any = { student: visibleStudentWhere(ctx) };
   if (filters.studentId) where.studentId = filters.studentId;
   if (filters.status) where.status = filters.status;
   if (filters.level) where.level = filters.level;
@@ -176,15 +177,15 @@ export async function getRecords(userId: string, filters: { studentId?: string; 
   });
 }
 
-export async function createRecord(userId: string, input: MentalRecordInput) {
-  const student = await prisma.student.findFirst({ where: { id: input.studentId, userId } });
+export async function createRecord(ctx: UserCtx, input: MentalRecordInput) {
+  const student = await prisma.student.findFirst({ where: { ...visibleStudentWhere(ctx), id: input.studentId } });
   if (!student) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
 
   // 跟进记录 + 自动建档（upsert 防并发冲突）+ 标记台账：同一事务
   const [record] = await prisma.$transaction([
     prisma.mentalRecord.create({
       data: {
-        userId,
+        userId: ctx.userId!,
         studentId: input.studentId,
         date: parseDateSafe(input.date) || new Date(),
         level: input.level || 'normal',
@@ -198,7 +199,7 @@ export async function createRecord(userId: string, input: MentalRecordInput) {
     }),
     prisma.mentalProfile.upsert({
       where: { studentId: input.studentId },
-      create: { userId, studentId: input.studentId, isPoverty: false, concernLevel: 1, categories: '["心理健康"]' },
+      create: { userId: ctx.userId!, studentId: input.studentId, isPoverty: false, concernLevel: 1, categories: '["心理健康"]' },
       update: {},
     }),
     ...(student.isMentalTarget
@@ -206,7 +207,7 @@ export async function createRecord(userId: string, input: MentalRecordInput) {
       : [prisma.student.update({ where: { id: input.studentId }, data: { isMentalTarget: true } })]),
   ]);
 
-  await audit.log(userId, 'record_create', {
+  await audit.log(ctx.userId!, 'record_create', {
     entityType: 'mentalRecord',
     entityId: record.id,
     detail: `${student.name} 新增跟进`,
@@ -215,9 +216,10 @@ export async function createRecord(userId: string, input: MentalRecordInput) {
   return record;
 }
 
-export async function updateRecord(userId: string, id: string, input: Partial<MentalRecordInput>) {
-  const existing = await prisma.mentalRecord.findFirst({ where: { id, userId } });
+export async function updateRecord(ctx: UserCtx, id: string, input: Partial<MentalRecordInput>) {
+  const existing = await prisma.mentalRecord.findFirst({ where: { id, student: visibleStudentWhere(ctx) } });
   if (!existing) throw Object.assign(new Error('记录不存在'), { statusCode: 404 });
+  if (!canManageRecord(ctx, existing)) throw Object.assign(new Error('无权限修改该记录'), { statusCode: 403 });
   // 白名单过滤，防止越权改写 userId/createdAt 等字段
   const allowed: (keyof MentalRecordInput)[] = ['date', 'level', 'status', 'situation', 'action', 'followUp', 'followUpDate'];
   const data: any = {};
@@ -231,7 +233,7 @@ export async function updateRecord(userId: string, id: string, input: Partial<Me
     data,
     include: { student: { select: { id: true, name: true, className: true, grade: true } } },
   });
-  await audit.log(userId, 'record_update', {
+  await audit.log(ctx.userId!, 'record_update', {
     entityType: 'mentalRecord',
     entityId: id,
     detail: `${record.student?.name || ''} 跟进记录修改`,
@@ -239,11 +241,12 @@ export async function updateRecord(userId: string, id: string, input: Partial<Me
   return record;
 }
 
-export async function deleteRecord(userId: string, id: string) {
-  const existing = await prisma.mentalRecord.findFirst({ where: { id, userId } });
+export async function deleteRecord(ctx: UserCtx, id: string) {
+  const existing = await prisma.mentalRecord.findFirst({ where: { id, student: visibleStudentWhere(ctx) } });
   if (!existing) throw Object.assign(new Error('记录不存在'), { statusCode: 404 });
+  if (!canManageRecord(ctx, existing)) throw Object.assign(new Error('无权限删除该记录'), { statusCode: 403 });
   const student = await prisma.student.findUnique({ where: { id: existing.studentId }, select: { name: true } });
-  await audit.log(userId, 'record_delete', {
+  await audit.log(ctx.userId!, 'record_delete', {
     entityType: 'mentalRecord',
     entityId: id,
     detail: `${student?.name || ''} 跟进记录删除`,

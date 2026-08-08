@@ -3,9 +3,6 @@ import { Settings, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useToastStore } from '../stores/toastStore';
 import client from '../api/client';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import DeepSeekCard from '../components/settings/DeepSeekCard';
 import IMWebhookCard from '../components/settings/IMWebhookCard';
 import FeishuCard from '../components/settings/FeishuCard';
@@ -108,22 +105,6 @@ export default function SettingsPage() {
           onSave={async (name, start, end) => { await put({ semesterName: name, semesterStart: start, semesterEnd: end }); }}
         />
         <IMWebhookCard webhookUrl={data.webhookUrl} imToken={data.imToken} />
-        <Card>
-          <h3 className="mb-1 text-base font-semibold text-slate-900 dark:text-slate-100">报送学院</h3>
-          <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">心理台账月度报送表（每月 15 号）中的「学院」列</p>
-          <div className="space-y-3">
-            <Input
-              label="学院名称"
-              value={data.mentalReportCollege}
-              onChange={(e) => set('mentalReportCollege', e.target.value)}
-              placeholder="如：华侨大学法学院"
-              hint="导出报送表时自动填入「学院」列"
-            />
-            <Button size="sm" onClick={async () => { await put({ mentalReportCollege: data.mentalReportCollege }); }}>
-              保存
-            </Button>
-          </div>
-        </Card>
         <FeishuCard
           feishuAppId={data.feishuAppId} feishuAppSecret={data.feishuAppSecret}
           feishuConfigured={data.feishuConfigured} feishuConnected={data.feishuConnected}

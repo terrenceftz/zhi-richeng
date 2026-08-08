@@ -1,4 +1,5 @@
 import prisma from '../db';
+import { visibleStudentWhere, type UserCtx } from '../utils/scope';
 
 /**
  * 为学生 AI 关怀功能构造「脱敏关怀摘要」。
@@ -24,10 +25,10 @@ function daysSince(date: Date | null, fallback: Date | null): number {
   return Math.max(0, Math.floor((Date.now() - base.getTime()) / 86400000));
 }
 
-/** 读取台账学生的完整关怀上下文（含风险判断），供 AI 建议 / 谈话提纲使用 */
-export async function buildStudentAiContext(userId: string, studentId: string): Promise<StudentAiContext> {
+/** 读取台账学生的完整关怀上下文（含风险判断），供 AI 建议 / 谈话提纲使用（可见范围） */
+export async function buildStudentAiContext(ctx: UserCtx, studentId: string): Promise<StudentAiContext> {
   const student = await prisma.student.findFirst({
-    where: { id: studentId, userId },
+    where: { ...visibleStudentWhere(ctx), id: studentId },
     include: {
       mentalProfile: true,
       mentalRecords: { orderBy: { date: 'desc' }, take: 15 },

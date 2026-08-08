@@ -7,6 +7,7 @@ export interface PublicUser {
   email: string;
   name: string;
   role: string;
+  college?: string;
 }
 
 export interface RegisterInput {
@@ -27,8 +28,8 @@ export interface TokenPair {
 
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
 
-function toPublicUser(user: { id: string; email: string; name: string; role: string }): PublicUser {
-  return { id: user.id, email: user.email, name: user.name, role: user.role };
+function toPublicUser(user: { id: string; email: string; name: string; role: string; college?: string | null }): PublicUser {
+  return { id: user.id, email: user.email, name: user.name, role: user.role, college: user.college || '' };
 }
 
 function issueTokens(userId: string, role: string): TokenPair {
@@ -52,7 +53,7 @@ export async function register(input: RegisterInput): Promise<{ user: PublicUser
     const userCount = await tx.user.count();
     const created = await tx.user.create({
       data: { email: input.email, password: hashed, name: input.name, role: userCount === 0 ? 'admin' : 'user' },
-      select: { id: true, email: true, name: true, role: true },
+      select: { id: true, email: true, name: true, role: true, college: true },
     });
     const pair = issueTokens(created.id, created.role);
     await tx.refreshToken.create({
@@ -89,7 +90,7 @@ export async function login(input: LoginInput): Promise<{ user: PublicUser; toke
   });
 
   return {
-    user: toPublicUser({ id: user.id, email: user.email, name: user.name, role: user.role }),
+    user: toPublicUser({ id: user.id, email: user.email, name: user.name, role: user.role, college: user.college }),
     tokens,
   };
 }

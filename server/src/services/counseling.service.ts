@@ -1,6 +1,7 @@
 import prisma from '../db';
 import * as audit from './audit.service';
 import { parseDateSafe } from './mental.service';
+import { visibleStudentWhere, canManageRecord, type UserCtx } from '../utils/scope';
 
 export interface CounselingInput {
   studentId: string;
@@ -10,8 +11,8 @@ export interface CounselingInput {
   followUp?: string;
 }
 
-export async function getCounselings(userId: string, filters: { studentId?: string; from?: string; to?: string }) {
-  const where: any = { userId };
+export async function getCounselings(ctx: UserCtx, filters: { studentId?: string; from?: string; to?: string }) {
+  const where: any = { student: visibleStudentWhere(ctx) };
   if (filters.studentId) where.studentId = filters.studentId;
   if (filters.from || filters.to) {
     where.date = {};
@@ -26,15 +27,15 @@ export async function getCounselings(userId: string, filters: { studentId?: stri
   });
 }
 
-export async function createCounseling(userId: string, input: CounselingInput) {
-  // 校验学生属于该用户
-  const student = await prisma.student.findFirst({ where: { id: input.studentId, userId } });
+export async function createCounseling(ctx: UserCtx, input: CounselingInput) {
+  // 校验学生可见（本学院共享）
+  const student = await prisma.student.findFirst({ where: { ...visibleStudentWhere(ctx), id: input.studentId } });
   if (!student) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
   const parsedDate = parseDateSafe(input.date);
   if (!parsedDate) throw Object.assign(new Error('谈心日期格式无效'), { statusCode: 400 });
   const record = await prisma.counseling.create({
     data: {
-      userId,
+      userId: ctx.userId!,
       studentId: input.studentId,
       date: parsedDate,
       type: input.type || '日常',
@@ -43,7 +44,7 @@ export async function createCounseling(userId: string, input: CounselingInput) {
     },
     include: { student: { select: { id: true, name: true, className: true } } },
   });
-  await audit.log(userId, 'counseling_create', {
+  await audit.log(ctx.userId!, 'counseling_create', {
     entityType: 'counseling',
     entityId: record.id,
     detail: `${student.name} 新增谈心（${record.type}）`,
@@ -51,9 +52,10 @@ export async function createCounseling(userId: string, input: CounselingInput) {
   return record;
 }
 
-export async function updateCounseling(userId: string, id: string, input: Partial<CounselingInput>) {
-  const existing = await prisma.counseling.findFirst({ where: { id, userId } });
+export async function updateCounseling(ctx: UserCtx, id: string, input: Partial<CounselingInput>) {
+  const existing = await prisma.counseling.findFirst({ where: { id, student: visibleStudentWhere(ctx) } });
   if (!existing) throw Object.assign(new Error('记录不存在'), { statusCode: 404 });
+  if (!canManageRecord(ctx, existing)) throw Object.assign(new Error('无权限修改该记录'), { statusCode: 403 });
   // 白名单过滤：禁止改写 userId / createdAt / studentId（归属不可变）
   const allowed: (keyof CounselingInput)[] = ['date', 'type', 'content', 'followUp'];
   const data: any = {};
@@ -70,7 +72,7 @@ export async function updateCounseling(userId: string, id: string, input: Partia
     data,
     include: { student: { select: { id: true, name: true, className: true } } },
   });
-  await audit.log(userId, 'counseling_update', {
+  await audit.log(ctx.userId!, 'counseling_update', {
     entityType: 'counseling',
     entityId: id,
     detail: `${record.student?.name || ''} 谈心记录修改`,
@@ -78,11 +80,12 @@ export async function updateCounseling(userId: string, id: string, input: Partia
   return record;
 }
 
-export async function deleteCounseling(userId: string, id: string) {
-  const existing = await prisma.counseling.findFirst({ where: { id, userId } });
+export async function deleteCounseling(ctx: UserCtx, id: string) {
+  const existing = await prisma.counseling.findFirst({ where: { id, student: visibleStudentWhere(ctx) } });
   if (!existing) throw Object.assign(new Error('记录不存在'), { statusCode: 404 });
+  if (!canManageRecord(ctx, existing)) throw Object.assign(new Error('无权限删除该记录'), { statusCode: 403 });
   const student = await prisma.student.findUnique({ where: { id: existing.studentId }, select: { name: true } });
-  await audit.log(userId, 'counseling_delete', {
+  await audit.log(ctx.userId!, 'counseling_delete', {
     entityType: 'counseling',
     entityId: id,
     detail: `${student?.name || ''} 谈心记录删除`,
@@ -100,10 +103,10 @@ export interface CounselingStats {
   recent: any[];
 }
 
-/** 学期谈心统计：覆盖率、未谈心名单、类型分布、最近记录 */
-export async function getSemesterStats(userId: string, range: { start?: string; end?: string }) {
+/** 学期谈心统计：覆盖率、未谈心名单、类型分布、最近记录（可见范围） */
+export async function getSemesterStats(ctx: UserCtx, range: { start?: string; end?: string }) {
   const students = await prisma.student.findMany({
-    where: { userId },
+    where: visibleStudentWhere(ctx),
     select: { id: true, name: true, className: true, grade: true, isMentalTarget: true },
   });
 
@@ -112,7 +115,7 @@ export async function getSemesterStats(userId: string, range: { start?: string; 
   if (range.end) dateFilter.lte = new Date(`${range.end}T23:59:59.999`);
 
   const counselings = await prisma.counseling.findMany({
-    where: { userId, date: dateFilter },
+    where: { student: visibleStudentWhere(ctx), date: dateFilter },
     select: { studentId: true, type: true },
   });
 
@@ -131,7 +134,7 @@ export async function getSemesterStats(userId: string, range: { start?: string; 
     .sort((a, b) => (a.isMentalTarget === b.isMentalTarget ? 0 : a.isMentalTarget ? -1 : 1));
 
   const recent = await prisma.counseling.findMany({
-    where: { userId },
+    where: { student: visibleStudentWhere(ctx) },
     orderBy: { date: 'desc' },
     take: 10,
     include: { student: { select: { id: true, name: true, className: true, isMentalTarget: true } } },

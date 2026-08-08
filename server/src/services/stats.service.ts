@@ -1,8 +1,10 @@
 import prisma from '../db';
+import { visibleStudentWhere, type UserCtx } from '../utils/scope';
 
 /**
  * 数据看板统计
  * 一次请求返回全部看板数据：汇总指标、分布、趋势。
+ * 学生/台账/谈心按学院可见范围统计；任务/通知仍为个人数据。
  */
 
 function parseCategories(raw: string | null): string[] {
@@ -14,13 +16,13 @@ function parseCategories(raw: string | null): string[] {
   }
 }
 
-export async function getOverview(userId: string) {
+export async function getOverview(ctx: UserCtx) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // 逾期任务：截止已过且未完成（含当天 dueTime；无 dueTime 次日 0 点起算）
+  // 逾期任务：截止已过且未完成（含当天 dueTime；无 dueTime 次日 0 点起算）——任务为个人数据
   const overdueCandidates = await prisma.task.findMany({
-    where: { userId, status: { not: 'done' }, dueDate: { not: null, lte: todayStart } },
+    where: { userId: ctx.userId, status: { not: 'done' }, dueDate: { not: null, lte: todayStart } },
     select: { dueDate: true, dueTime: true },
   });
   const overdueTaskCount = overdueCandidates.filter((t) => {
@@ -34,6 +36,7 @@ export async function getOverview(userId: string) {
     return now > due;
   }).length;
 
+  const studentWhere = visibleStudentWhere(ctx);
   const [
     studentCount,
     mentalTargetCount,
@@ -43,18 +46,18 @@ export async function getOverview(userId: string) {
     taskCount,
     pendingNoticeCount,
   ] = await Promise.all([
-    prisma.student.count({ where: { userId } }),
-    prisma.student.count({ where: { userId, isMentalTarget: true } }),
-    prisma.counseling.count({ where: { userId } }),
-    prisma.mentalRecord.count({ where: { userId } }),
-    prisma.notice.count({ where: { userId } }),
-    prisma.task.count({ where: { userId } }),
-    prisma.notice.count({ where: { userId, status: { not: 'done' } } }),
+    prisma.student.count({ where: studentWhere }),
+    prisma.student.count({ where: { ...studentWhere, isMentalTarget: true } }),
+    prisma.counseling.count({ where: { student: studentWhere } }),
+    prisma.mentalRecord.count({ where: { student: studentWhere } }),
+    prisma.notice.count({ where: { userId: ctx.userId } }),
+    prisma.task.count({ where: { userId: ctx.userId } }),
+    prisma.notice.count({ where: { userId: ctx.userId, status: { not: 'done' } } }),
   ]);
 
-  // 今日待办任务数
+  // 今日待办任务数（个人）
   const todayTasks = await prisma.task.count({
-    where: { userId, status: { not: 'done' }, dueDate: { gte: todayStart, lt: new Date(todayStart.getTime() + 86400000) } },
+    where: { userId: ctx.userId, status: { not: 'done' }, dueDate: { gte: todayStart, lt: new Date(todayStart.getTime() + 86400000) } },
   });
 
   return {
@@ -70,17 +73,18 @@ export async function getOverview(userId: string) {
   };
 }
 
-export async function getStudentDist(userId: string) {
+export async function getStudentDist(ctx: UserCtx) {
+  const studentWhere = visibleStudentWhere(ctx);
   const [byGrade, byType, byGender] = await Promise.all([
     prisma.student.groupBy({
-      by: ['grade'], where: { userId, grade: { not: null } }, _count: { _all: true },
+      by: ['grade'], where: { ...studentWhere, grade: { not: null } }, _count: { _all: true },
       orderBy: [{ grade: 'asc' }],
     }),
     prisma.student.groupBy({
-      by: ['studentType'], where: { userId, studentType: { not: null } }, _count: { _all: true },
+      by: ['studentType'], where: { ...studentWhere, studentType: { not: null } }, _count: { _all: true },
     }),
     prisma.student.groupBy({
-      by: ['gender'], where: { userId, gender: { not: null } }, _count: { _all: true },
+      by: ['gender'], where: { ...studentWhere, gender: { not: null } }, _count: { _all: true },
     }),
   ]);
 
@@ -91,9 +95,10 @@ export async function getStudentDist(userId: string) {
   };
 }
 
-export async function getMentalDist(userId: string) {
+export async function getMentalDist(ctx: UserCtx) {
+  const studentWhere = visibleStudentWhere(ctx);
   const targets = await prisma.student.findMany({
-    where: { userId, isMentalTarget: true },
+    where: { ...studentWhere, isMentalTarget: true },
     select: { id: true, mentalProfile: true },
   });
 
@@ -128,7 +133,7 @@ export async function getMentalDist(userId: string) {
   }
   const monthStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const records = await prisma.mentalRecord.findMany({
-    where: { userId, date: { gte: monthStart } },
+    where: { student: studentWhere, date: { gte: monthStart } },
     select: { date: true },
   });
   for (const r of records) {

@@ -11,12 +11,17 @@ import prisma from '../db';
 const router = Router();
 router.use(authMiddleware);
 
+/** 从请求构建 scope 上下文 */
+function ctxOf(req: Request) {
+  return { userId: req.userId, role: req.userRole, college: req.college };
+}
+
 // AI 谈心助手：生成谈话提纲（谈心前）
 router.post('/outline', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { studentId } = req.body;
     if (!studentId) return res.status(400).json({ message: '缺少 studentId' });
-    const ctx = await aiContext.buildStudentAiContext(req.userId!, studentId);
+    const ctx = await aiContext.buildStudentAiContext(ctxOf(req), studentId);
     const outline = await llm.counselingOutline(ctx);
     res.json({ outline });
   } catch (err) {
@@ -31,7 +36,7 @@ router.post('/summarize', async (req: Request, res: Response, next: NextFunction
     if (!text || typeof text !== 'string') return res.status(400).json({ message: '缺少 text 字段' });
     let ctx: Awaited<ReturnType<typeof aiContext.buildStudentAiContext>> | undefined;
     if (studentId) {
-      ctx = await aiContext.buildStudentAiContext(req.userId!, studentId).catch(() => undefined);
+      ctx = await aiContext.buildStudentAiContext(ctxOf(req), studentId).catch(() => undefined);
     }
     const result = await llm.counselingSummarize(text.trim(), ctx);
     res.json(result);
@@ -43,8 +48,9 @@ router.post('/summarize', async (req: Request, res: Response, next: NextFunction
 // 谈心记录 Excel 汇总导出
 router.get('/export/excel', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { visibleStudentWhere } = await import('../utils/scope');
     const records = await prisma.counseling.findMany({
-      where: { userId: req.userId },
+      where: { student: visibleStudentWhere(ctxOf(req)) },
       include: { student: { select: { name: true, className: true, grade: true, isMentalTarget: true } } },
       orderBy: { date: 'desc' },
     });
@@ -84,7 +90,7 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
       start = inSecondHalf ? `${year}-09-01` : `${year - 1}-09-01`;
       end = inSecondHalf ? `${year + 1}-08-31` : `${year}-08-31`;
     }
-    const stats = await counselingService.getSemesterStats(req.userId!, { start, end });
+    const stats = await counselingService.getSemesterStats(ctxOf(req), { start, end });
     res.json({ ...stats, range: { start, end } });
   } catch (err) {
     next(err);
@@ -93,7 +99,7 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const records = await counselingService.getCounselings(req.userId!, {
+    const records = await counselingService.getCounselings(ctxOf(req), {
       studentId: req.query.studentId as string | undefined,
       from: req.query.from as string | undefined,
       to: req.query.to as string | undefined,
@@ -110,7 +116,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     if (!studentId || !date || !content) {
       return res.status(400).json({ message: '缺少 studentId / date / content' });
     }
-    const record = await counselingService.createCounseling(req.userId!, {
+    const record = await counselingService.createCounseling(ctxOf(req), {
       studentId, date, type, content, followUp,
     });
     res.status(201).json({ record });
@@ -121,7 +127,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const record = await counselingService.updateCounseling(req.userId!, req.params.id, req.body);
+    const record = await counselingService.updateCounseling(ctxOf(req), req.params.id, req.body);
     res.json({ record });
   } catch (err) {
     next(err);
@@ -130,7 +136,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await counselingService.deleteCounseling(req.userId!, req.params.id);
+    await counselingService.deleteCounseling(ctxOf(req), req.params.id);
     res.json({ message: '已删除' });
   } catch (err) {
     next(err);

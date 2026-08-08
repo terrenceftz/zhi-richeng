@@ -12,9 +12,14 @@ router.use(authMiddleware);
 // 导入仅接受 JSON 文件（前端用 xlsx 解析 Excel 后提交 JSON 数组）
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
+/** 从请求构建 scope 上下文 */
+function ctxOf(req: Request) {
+  return { userId: req.userId, role: req.userRole, college: req.college };
+}
+
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await studentsService.getStudents(req.userId!, {
+    const result = await studentsService.getStudents(ctxOf(req), {
       q: (req.query.q as string) || undefined,
       className: (req.query.className as string) || undefined,
       grade: (req.query.grade as string) || undefined,
@@ -31,7 +36,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.get('/classes', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const classes = await studentsService.getClasses(req.userId!);
+    const classes = await studentsService.getClasses(ctxOf(req));
     res.json({ classes });
   } catch (err) {
     next(err);
@@ -40,18 +45,19 @@ router.get('/classes', async (req: Request, res: Response, next: NextFunction) =
 
 router.get('/grades', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const grades = await studentsService.getGrades(req.userId!);
+    const grades = await studentsService.getGrades(ctxOf(req));
     res.json({ grades });
   } catch (err) {
     next(err);
   }
 });
 
-// 花名册 Excel 导出（全量字段）
+// 花名册 Excel 导出（全量字段，按可见范围）
 router.get('/export/excel', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { visibleStudentWhere } = await import('../utils/scope');
     const students = await prisma.student.findMany({
-      where: { userId: req.userId },
+      where: visibleStudentWhere(ctxOf(req)),
       include: { mentalProfile: true },
       orderBy: [{ grade: 'asc' }, { className: 'asc' }],
     });
@@ -96,7 +102,7 @@ router.get('/export/excel', async (req: Request, res: Response, next: NextFuncti
 
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const student = await studentsService.getStudentById(req.userId!, req.params.id);
+    const student = await studentsService.getStudentById(ctxOf(req), req.params.id);
     res.json({ student });
   } catch (err) {
     next(err);
@@ -105,12 +111,12 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, studentNo, className, gender, birthDate, studentType, idNumber, grade, hometown, phone, dormitory, address, tags, remark } = req.body;
+    const { name, studentNo, className, gender, birthDate, studentType, idNumber, grade, hometown, phone, dormitory, address, tags, remark, college } = req.body;
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ message: '缺少学生姓名' });
     }
-    const student = await studentsService.createStudent(req.userId!, {
-      name, studentNo, className, gender, birthDate, studentType, idNumber, grade, hometown, phone, dormitory, address, tags, remark,
+    const student = await studentsService.createStudent(ctxOf(req), {
+      name, studentNo, className, gender, birthDate, studentType, idNumber, grade, hometown, phone, dormitory, address, tags, remark, college,
     });
     res.status(201).json({ student });
   } catch (err) {
@@ -120,7 +126,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const student = await studentsService.updateStudent(req.userId!, req.params.id, req.body);
+    const student = await studentsService.updateStudent(ctxOf(req), req.params.id, req.body);
     res.json({ student });
   } catch (err) {
     next(err);
@@ -129,7 +135,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await studentsService.deleteStudent(req.userId!, req.params.id);
+    await studentsService.deleteStudent(ctxOf(req), req.params.id);
     res.json({ message: '已删除' });
   } catch (err) {
     next(err);
@@ -168,12 +174,14 @@ router.post('/import', upload.single('file'), async (req: Request, res: Response
         dormitory: s.dormitory ? String(s.dormitory) : undefined,
         address: s.address ? String(s.address) : undefined,
         remark: s.remark ? String(s.remark) : undefined,
+        college: s.college ? String(s.college) : undefined, // 可选，缺省用导入者学院
       }));
 
-    // 预防重复：批量查重（一次查询替代 N 次 findFirst）
+    // 预防重复：本学院/可见范围内批量查重（一次查询替代 N 次 findFirst）
+    const { visibleStudentWhere } = await import('../utils/scope');
     const nosToCheck = cleaned.map((s) => s.studentNo).filter(Boolean) as string[];
     const existing = nosToCheck.length > 0
-      ? await prisma.student.findMany({ where: { userId: req.userId, studentNo: { in: nosToCheck } }, select: { studentNo: true } })
+      ? await prisma.student.findMany({ where: { ...visibleStudentWhere(ctxOf(req)), studentNo: { in: nosToCheck } }, select: { studentNo: true } })
       : [];
     const existingSet = new Set(existing.map((s) => s.studentNo));
     const skipNo: string[] = [];
@@ -186,7 +194,7 @@ router.post('/import', upload.single('file'), async (req: Request, res: Response
       }
     }
 
-    const created = await studentsService.createStudentsBatch(req.userId!, toCreate);
+    const created = await studentsService.createStudentsBatch(ctxOf(req), toCreate);
     const skipMsg = skipNo.length > 0 ? `，跳过 ${skipNo.length} 名已存在（学号重复，未覆盖）` : '';
     res.status(201).json({ count: created.length, skipped: skipNo.length, message: `已导入 ${created.length} 名学生${skipMsg}` });
   } catch (err) {

@@ -2,6 +2,7 @@ import prisma from '../db';
 import * as llmService from './llm.service';
 import * as mentalService from './mental.service';
 import { getDeepSeekApiKey } from './settings.service';
+import { visibleStudentWhere, type UserCtx } from '../utils/scope';
 
 /**
  * 解析飞书消息是否为「添加心理台账跟进记录」请求。
@@ -31,20 +32,24 @@ export async function handleMentalFollowUp(userId: string, text: string): Promis
 
   const { studentName, content, date } = parsed;
 
-  // 查找学生（按姓名，其次学号）
+  // 按用户所属学院构建可见范围（本学院共享学生也可跟进）
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, college: true } });
+  const ctx: UserCtx = { userId, role: user?.role || 'user', college: user?.college || '' };
+
+  // 查找学生（按姓名，其次学号；本学院范围）
   let student = await prisma.student.findFirst({
-    where: { userId, name: studentName },
+    where: { ...visibleStudentWhere(ctx), name: studentName },
   });
   if (!student) {
     student = await prisma.student.findFirst({
-      where: { userId, studentNo: studentName },
+      where: { ...visibleStudentWhere(ctx), studentNo: studentName },
     });
   }
   if (!student) {
     // 仅当输入姓名≥2字时做 contains 模糊匹配，且绝不自动落库（避免误写）
     if (studentName.length >= 2) {
       const fuzzy = await prisma.student.findMany({
-        where: { userId, name: { contains: studentName } },
+        where: { ...visibleStudentWhere(ctx), name: { contains: studentName } },
         take: 5,
       });
       if (fuzzy.length === 1) {
@@ -60,7 +65,7 @@ export async function handleMentalFollowUp(userId: string, text: string): Promis
 
   // 创建跟进记录（自动建档 + 标记台账学生）
   try {
-    await mentalService.createRecord(userId, {
+    await mentalService.createRecord(ctx, {
       studentId: student.id,
       date: date || new Date().toISOString().slice(0, 10),
       situation: content,

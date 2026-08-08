@@ -1,6 +1,6 @@
 import prisma from '../db';
 import * as settingsService from './settings.service';
-import * as feishuService from './feishu.service';
+import { visibleStudentWhere, type UserCtx } from '../utils/scope';
 
 /**
  * 心理台账月度报送 + 风险预警
@@ -18,26 +18,39 @@ export async function getSkipMonths(): Promise<number[]> {
   return [1, 2, 7, 8];
 }
 
+/** 是否启用月度报送（setting: mental_report_enabled，默认开启） */
+export async function isReportEnabled(): Promise<boolean> {
+  const raw = await settingsService.getSetting('mental_report_enabled');
+  return raw !== 'false';
+}
+
+/** 当月报送日（setting: mental_report_day，默认 15；限制 1-28，避免 29/30/31 月末天数不足） */
+export async function getReportDay(): Promise<number> {
+  const raw = await settingsService.getSetting('mental_report_day');
+  const d = parseInt(raw || '15', 10);
+  return Number.isFinite(d) && d >= 1 && d <= 28 ? d : 15;
+}
+
+/** 判断指定日期是否为报送日（day 由调用方传入，默认 15；业务侧用 getReportDay() 读取可配置值） */
+export function isReportDay(now: Date, day = 15): boolean {
+  return now.getDate() === day;
+}
+
 /** 当月是否为寒暑假（不报送） */
 export async function isHolidayMonth(now = new Date()): Promise<boolean> {
   const skip = await getSkipMonths();
   return skip.includes(now.getMonth() + 1);
 }
 
-/** 是否为当月报送日（15 号） */
-export function isReportDay(now = new Date()): boolean {
-  return now.getDate() === 15;
-}
-
 /**
- * 获取本月（1号~今天）尚未跟进的台账学生。
- * 用于 15 号报送提醒与页面展示。
+ * 获取本月（1号~今天）尚未跟进的台账学生（可见范围）。
+ * 用于报送提醒与页面展示。
  */
-export async function getNoFollowUpThisMonth(userId: string): Promise<any[]> {
+export async function getNoFollowUpThisMonth(ctx: UserCtx): Promise<any[]> {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const students = await prisma.student.findMany({
-    where: { userId, isMentalTarget: true },
+    where: { ...visibleStudentWhere(ctx), isMentalTarget: true },
     include: {
       mentalProfile: true,
       mentalRecords: {
@@ -53,13 +66,13 @@ export async function getNoFollowUpThisMonth(userId: string): Promise<any[]> {
 }
 
 /**
- * 风险预警：长期未跟进的重点学生。
+ * 风险预警：长期未跟进的重点学生（可见范围）。
  * 规则：三级 >30 天、二级 >45 天、一级 >60 天未跟进；经济困难+心理健康 附加提示。
  */
-export async function getRiskAlerts(userId: string): Promise<any[]> {
+export async function getRiskAlerts(ctx: UserCtx): Promise<any[]> {
   const now = new Date();
   const students = await prisma.student.findMany({
-    where: { userId, isMentalTarget: true },
+    where: { ...visibleStudentWhere(ctx), isMentalTarget: true },
     include: {
       mentalProfile: true,
       mentalRecords: { orderBy: { date: 'desc' }, take: 1, select: { id: true, date: true, situation: true } },
@@ -97,69 +110,6 @@ export async function getRiskAlerts(userId: string): Promise<any[]> {
   return alerts.sort((a, b) => b.concernLevel - a.concernLevel || b.daysSince - a.daysSince);
 }
 
-const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 每 6 小时检查一次（15 号当天触发）
-let intervalId: ReturnType<typeof setInterval> | null = null;
-
-export function startMentalReportService(): void {
-  if (intervalId) return;
-  console.log('[台账] 月度报送提醒已启动');
-  checkMonthlyReport();
-  intervalId = setInterval(checkMonthlyReport, CHECK_INTERVAL);
-}
-
-export function stopMentalReportService(): void {
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
-}
-
-/** 每月 15 号：向所有绑定了飞书的用户推送「本月未跟进学生」清单（寒暑假跳过，持久化去重） */
-async function checkMonthlyReport(): Promise<void> {
-  try {
-    const now = new Date();
-    if (!isReportDay(now)) return;
-    if (await isHolidayMonth(now)) return;
-
-    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const users = await prisma.user.findMany();
-
-    for (const user of users) {
-      // 持久化去重：本月已推送过则跳过
-      const sent = await prisma.reminderLog.findUnique({
-        where: { taskId_key: { taskId: user.id, key: `mental_report_${monthKey}` } },
-      });
-      if (sent) continue;
-
-      const openId = await settingsService.getSetting(`feishu_openid_${user.id}`);
-      if (!openId) continue;
-
-      const pending = await getNoFollowUpThisMonth(user.id);
-      if (pending.length === 0) continue;
-
-      const lines = pending.slice(0, 15).map((s: any, i: number) =>
-        `${i + 1}. ${s.name}（${s.className || '无班级'}）· ${s.mentalProfile?.concernLevel || 1}级${s.mentalProfile?.isPoverty ? ' 💰' : ''}`
-      );
-      const more = pending.length > 15 ? `\n... 等共 ${pending.length} 人` : '';
-      const msg = [
-        `📋 本月心理台账跟进报送提醒（${monthKey}）`,
-        ``,
-        `以下 ${pending.length} 名台账学生本月尚未跟进，请在 15 号前完成跟进报送：`,
-        ``,
-        lines.join('\n') + more,
-        ``,
-        `💡 如已完成请忽略；可在「心理台账」页面查看详情`,
-      ].join('\n');
-
-      console.log(`[台账] 月度报送提醒: ${user.email} (${pending.length} 人)`);
-      await feishuService.sendReminder(openId, msg);
-      try {
-        await prisma.reminderLog.create({ data: { taskId: user.id, key: `mental_report_${monthKey}` } });
-      } catch {
-        /* 唯一约束冲突忽略 */
-      }
-    }
-  } catch (err) {
-    console.error('[台账] 月度报送检查失败:', err);
-  }
-}
+// 心理台账报送的定时推送已并入「周期性任务提醒模块」（services/recurringReminder.service.ts，
+// 内置 contentType=mental_report 的周期项，读取上方 isReportEnabled/getReportDay/getSkipMonths 等配置）。
+// 本文件仅保留供页面展示与周期模块复用的查询/配置函数。

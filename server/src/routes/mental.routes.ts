@@ -7,16 +7,22 @@ import * as llm from '../services/llm.service';
 import * as aiContext from '../services/aiContext.service';
 import * as audit from '../services/audit.service';
 import prisma from '../db';
+import { visibleStudentWhere } from '../utils/scope';
 
 const router = Router();
 router.use(authMiddleware);
+
+/** 从请求构建 scope 上下文 */
+function ctxOf(req: Request) {
+  return { userId: req.userId, role: req.userRole, college: req.college };
+}
 
 const CATEGORY_KEYS = ['心理健康', '学业预警', '延期毕业', '重大疾病', '政治安全', '其他关注'];
 
 // 台账学生列表（带档案）
 router.get('/students', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const students = await mentalService.getMentalStudents(req.userId!);
+    const students = await mentalService.getMentalStudents(ctxOf(req));
     res.json({ students });
   } catch (err) {
     next(err);
@@ -26,7 +32,7 @@ router.get('/students', async (req: Request, res: Response, next: NextFunction) 
 // 风险预警：长期未跟进的重点学生
 router.get('/alerts', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const alerts = await mentalAlert.getRiskAlerts(req.userId!);
+    const alerts = await mentalAlert.getRiskAlerts(ctxOf(req));
     res.json({ alerts });
   } catch (err) {
     next(err);
@@ -36,7 +42,7 @@ router.get('/alerts', async (req: Request, res: Response, next: NextFunction) =>
 // 本月尚未跟进的台账学生（月度报送清单）
 router.get('/monthly-pending', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const pending = await mentalAlert.getNoFollowUpThisMonth(req.userId!);
+    const pending = await mentalAlert.getNoFollowUpThisMonth(ctxOf(req));
     const isHoliday = await mentalAlert.isHolidayMonth();
     res.json({ pending, isHoliday, skipMonths: await mentalAlert.getSkipMonths() });
   } catch (err) {
@@ -50,7 +56,7 @@ router.post('/advice', async (req: Request, res: Response, next: NextFunction) =
   try {
     const { studentId } = req.body;
     if (!studentId) return res.status(400).json({ message: '缺少 studentId' });
-    const ctx = await aiContext.buildStudentAiContext(req.userId!, studentId);
+    const ctx = await aiContext.buildStudentAiContext(ctxOf(req), studentId);
     const advice = await llm.mentalAdvice(ctx);
     res.json({ advice });
   } catch (err) {
@@ -64,7 +70,7 @@ router.patch('/students/:id/toggle', async (req: Request, res: Response, next: N
     const { value } = req.body;
     // 显式判断布尔值（兼容字符串 "true"/"false" 与布尔）
     const target = value === true || value === 'true';
-    const student = await mentalService.toggleMentalTarget(req.userId!, req.params.id, target);
+    const student = await mentalService.toggleMentalTarget(ctxOf(req), req.params.id, target);
     res.json({ student });
   } catch (err) {
     next(err);
@@ -74,7 +80,7 @@ router.patch('/students/:id/toggle', async (req: Request, res: Response, next: N
 // 更新台账档案（upsert）
 router.put('/students/:id/profile', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const profile = await mentalService.upsertProfile(req.userId!, req.params.id, req.body);
+    const profile = await mentalService.upsertProfile(ctxOf(req), req.params.id, req.body);
     res.json({ profile });
   } catch (err) {
     next(err);
@@ -84,7 +90,7 @@ router.put('/students/:id/profile', async (req: Request, res: Response, next: Ne
 // 台账 Excel 导出
 router.get('/export', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const students = await mentalService.getMentalStudents(req.userId!);
+    const students = await mentalService.getMentalStudents(ctxOf(req));
     const rows = students.map((s: any) => {
       const p = s.mentalProfile || {};
       return {
@@ -134,9 +140,9 @@ router.get('/export/report', async (req: Request, res: Response, next: NextFunct
     // 学院（可配置，设置项 mental_report_college）
     const college = (await mentalService.getCollegeName()) || '';
 
-    // 台账学生（带档案 + 全部跟进记录）
+    // 台账学生（带档案 + 全部跟进记录；可见范围）
     const students = await prisma.student.findMany({
-      where: { userId, isMentalTarget: true },
+      where: { ...visibleStudentWhere(ctxOf(req)), isMentalTarget: true },
       include: {
         mentalProfile: true,
         mentalRecords: { orderBy: [{ date: 'asc' }, { createdAt: 'asc' }] },
@@ -266,7 +272,7 @@ router.post('/import', async (req: Request, res: Response, next: NextFunction) =
       if (!studentNo || studentNo === 'null' || studentNo === 'undefined') continue;
 
       const student = await prisma.student.findFirst({
-        where: { userId: req.userId, studentNo },
+        where: { ...visibleStudentWhere(ctxOf(req)), studentNo },
       });
       if (!student) {
         notFound.push(studentNo);
@@ -280,7 +286,7 @@ router.post('/import', async (req: Request, res: Response, next: NextFunction) =
         .map((s: string) => s.trim())
         .filter((s: string) => CATEGORY_KEYS.includes(s));
 
-      const profile = await mentalService.upsertProfile(req.userId!, student.id, {
+      const profile = await mentalService.upsertProfile(ctxOf(req), student.id, {
         isPoverty: /^是|^1|true/i.test(String(row.isPoverty ?? row.是否家庭经济困难生 ?? '否')),
         concernLevel: parseInt(String(row.concernLevel ?? row.关注级别 ?? '1')) || 1,
         categories: categories.length > 0 ? categories : ['心理健康'],
@@ -310,7 +316,7 @@ router.post('/import', async (req: Request, res: Response, next: NextFunction) =
 // 跟进记录列表
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const records = await mentalService.getRecords(req.userId!, {
+    const records = await mentalService.getRecords(ctxOf(req), {
       studentId: req.query.studentId as string | undefined,
       status: req.query.status as string | undefined,
       level: req.query.level as string | undefined,
@@ -327,7 +333,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     if (!studentId || !date || !situation) {
       return res.status(400).json({ message: '缺少 studentId / date / situation' });
     }
-    const record = await mentalService.createRecord(req.userId!, {
+    const record = await mentalService.createRecord(ctxOf(req), {
       studentId, date, level, status, situation, action, followUp, followUpDate,
     });
     res.status(201).json({ record });
@@ -338,7 +344,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const record = await mentalService.updateRecord(req.userId!, req.params.id, req.body);
+    const record = await mentalService.updateRecord(ctxOf(req), req.params.id, req.body);
     res.json({ record });
   } catch (err) {
     next(err);
@@ -347,7 +353,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await mentalService.deleteRecord(req.userId!, req.params.id);
+    await mentalService.deleteRecord(ctxOf(req), req.params.id);
     res.json({ message: '已删除' });
   } catch (err) {
     next(err);

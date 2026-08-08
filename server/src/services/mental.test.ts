@@ -30,9 +30,9 @@ test('parseDateSafe: 非法输入返回 null 而非抛错', () => {
   assert.equal(parseDateSafe('abc'), null);
 });
 
-test('isReportDay: 15 号返回 true，其他日期 false', () => {
-  assert.equal(isReportDay(new Date(2026, 5, 15)), true);
-  assert.equal(isReportDay(new Date(2026, 5, 14)), false);
-  assert.equal(isReportDay(new Date(2026, 5, 16)), false);
-  assert.equal(isReportDay(new Date(2026, 5, 1)), false);
+test('isReportDay: 报送日返回 true，其他日期 false', () => {
+  assert.equal(isReportDay(new Date(2026, 5, 15), 15), true);
+  assert.equal(isReportDay(new Date(2026, 5, 14), 15), false);
+  assert.equal(isReportDay(new Date(2026, 5, 16), 15), false);
+  assert.equal(isReportDay(new Date(2026, 5, 1), 15), false);
 });

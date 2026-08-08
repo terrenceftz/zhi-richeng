@@ -13,6 +13,7 @@ model User {
   password      String
   name          String
   role          String         @default("user") // "user" 普通用户 | "dept_admin" 院系管理员 | "admin" 系统管理员
+  college       String         @default("") // 所属学院（学院共享数据范围）
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   tasks         Task[]
@@ -103,6 +104,7 @@ model Student {
   address     String?      // 家庭住址
   tags        String       @default("[]") // JSON 数组：学业预警/贫困/心理 等
   remark      String?
+  college     String       @default("") // 学生所属学院（同学院辅导员共享可见）
   isMentalTarget Boolean   @default(false) // 是否心理台账重点关注学生
   counselings Counseling[]
   mentalRecords MentalRecord[]
@@ -222,4 +224,22 @@ model AuditLog {
 
   @@index([userId, createdAt])
   @@index([action])
+}
+
+/// 周期性任务提醒：每天/每周/每月定时推送（内置心理台账报送）
+model RecurringReminder {
+  id          String   @id @default(uuid())
+  title       String // 提醒名称
+  cycleType   String   @default("monthly") // daily | weekly | monthly
+  time        String   @default("09:00") // 触发时间 HH:MM
+  weekdays    String? // weekly：逗号分隔 0-6（0=周日）
+  dayOfMonth  Int? // monthly：1-28
+  content     String? // 固定消息文本（contentType=text 时使用）
+  contentType String   @default("text") // text | mental_report（内置动态：未跟进学生清单）
+  enabled     Boolean  @default(true)
+  builtin     Boolean  @default(false) // 内置项（心理台账报送）不可删除
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled])
 }

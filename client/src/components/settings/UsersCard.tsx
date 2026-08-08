@@ -12,6 +12,7 @@ interface UserRow {
   email: string;
   name: string;
   role: string;
+  college?: string;
   createdAt: string;
 }
 
@@ -85,6 +86,17 @@ export default function UsersCard() {
     }
   };
 
+  const saveCollege = async (id: string, college: string) => {
+    try {
+      await client.put(`/users/${id}/role`, { college: college.trim() });
+      toast.success('学院已更新');
+      await load();
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存失败';
+      toast.error(msg);
+    }
+  };
+
   const deleteUser = async (id: string) => {
     if (!confirm('确定删除该用户？其所有数据（学生/台账/谈心/任务）将一并删除。')) return;
     try {
@@ -130,6 +142,13 @@ export default function UsersCard() {
                 <p className="truncate text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
+                <input
+                  defaultValue={u.college || ''}
+                  placeholder="所属学院"
+                  onBlur={(e) => { if ((e.target.value || '').trim() !== (u.college || '')) saveCollege(u.id, e.target.value); }}
+                  title="设置该用户所属学院（同学院辅导员共享学生/台账数据）"
+                  className="w-28 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                />
                 <select
                   value={u.role}
                   disabled={u.id === user?.id || changingId === u.id}
