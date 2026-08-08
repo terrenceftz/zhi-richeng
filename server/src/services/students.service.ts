@@ -218,6 +218,20 @@ export async function setStudentStatus(ctx: UserCtx, id: string, status: string)
   return parseTags(updated);
 }
 
+/**
+ * 批量设置学院：把当前用户可见范围内的学生统一归入指定学院（管理员/院系管理员用）。
+ * 用于历史数据补归属——学生没有学院标签时同学院辅导员无法共享看到。
+ */
+export async function batchSetCollege(ctx: UserCtx, college: string): Promise<number> {
+  const scope = visibleStudentWhere(ctx);
+  const clean = String(college || '').trim().slice(0, 100);
+  const result = await prisma.student.updateMany({ where: scope, data: { college: clean } });
+  await audit.log(ctx.userId!, 'student_update', {
+    detail: `批量设置学院「${clean || '（清空）'}」：影响 ${result.count} 名学生`,
+  });
+  return result.count;
+}
+
 export interface UpsertResult {
   created: number;
   updated: number;

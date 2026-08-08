@@ -193,6 +193,20 @@ router.put('/:id/status', async (req: Request, res: Response, next: NextFunction
   }
 });
 
+// 批量设置学院（历史数据补归属）：系统管理员/院系管理员，应用于当前可见范围学生
+router.post('/batch-college', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!['admin', 'dept_admin'].includes(req.userRole || '')) {
+      return res.status(403).json({ message: '需要系统管理员或院系管理员权限' });
+    }
+    const college = typeof req.body?.college === 'string' ? req.body.college : '';
+    const count = await studentsService.batchSetCollege(ctxOf(req), college);
+    res.json({ count, message: `已为 ${count} 名学生设置学院「${college.trim() || '（清空）'}」` });
+  } catch (err) {
+    next(err);
+  }
+});
+
 /** 批量导入：接受 JSON 数组（前端把 Excel/CSV 转 JSON 后提交） */
 router.post('/import', upload.single('file'), async (req: Request, res: Response, next: NextFunction) => {
   try {

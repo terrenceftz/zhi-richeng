@@ -49,6 +49,12 @@ export async function updateStudentStatus(id: string, status: string): Promise<S
   return data.student;
 }
 
+/** 批量设置学院（当前可见学生，管理员/院系管理员） */
+export async function batchSetCollege(college: string): Promise<{ count: number; message: string }> {
+  const { data } = await client.post('/students/batch-college', { college });
+  return data;
+}
+
 export async function importStudents(students: Partial<Student>[]): Promise<{ created: number; updated: number; message: string }> {
   const { data } = await client.post('/students/import', { students });
   return { created: data.created || 0, updated: data.updated || 0, message: data.message || '' };
