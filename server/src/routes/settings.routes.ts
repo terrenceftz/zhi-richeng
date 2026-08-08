@@ -50,6 +50,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       regEnabled: settings.registration_enabled || 'false',
       reminderMinutes: parseInt(settings.reminder_minutes || '15'),
       reminderEnabled: settings.reminder_enabled !== 'false',
+      digestEnabled: settings.digest_enabled !== 'false',
+      digestHour: parseInt(settings.digest_hour || '8'),
+      digestAi: settings.digest_ai !== 'false',
       semesterName: settings.semester_name || '',
       semesterStart: settings.semester_start || '',
       semesterEnd: settings.semester_end || '',
@@ -62,7 +65,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, regEnabled, semesterName, semesterStart, semesterEnd, mentalReportCollege } = req.body;
+    const { deepseekApiKey, feishuOpenId, feishuAppId, feishuAppSecret, reminderMinutes, reminderEnabled, digestEnabled, digestHour, digestAi, regEnabled, semesterName, semesterStart, semesterEnd, mentalReportCollege } = req.body;
 
     // 系统级字段（影响全局）必须管理员：飞书凭证、注册开关、学期、DeepSeek Key、报送学院
     const systemFields = ['feishuAppId', 'feishuAppSecret', 'regEnabled', 'semesterName', 'semesterStart', 'semesterEnd', 'deepseekApiKey', 'mentalReportCollege'];
@@ -96,6 +99,15 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
     }
     if (reminderEnabled !== undefined) {
       await settingsService.setSetting('reminder_enabled', String(reminderEnabled));
+    }
+    if (digestEnabled !== undefined) {
+      await settingsService.setSetting('digest_enabled', String(digestEnabled));
+    }
+    if (digestHour !== undefined) {
+      await settingsService.setSetting('digest_hour', String(Math.max(0, Math.min(23, parseInt(String(digestHour), 10) || 8))));
+    }
+    if (digestAi !== undefined) {
+      await settingsService.setSetting('digest_ai', String(digestAi));
     }
     if (regEnabled !== undefined) {
       await settingsService.setSetting('registration_enabled', String(regEnabled));

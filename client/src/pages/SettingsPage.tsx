@@ -11,6 +11,7 @@ import IMWebhookCard from '../components/settings/IMWebhookCard';
 import FeishuCard from '../components/settings/FeishuCard';
 import SemesterCard from '../components/settings/SemesterCard';
 import ReminderCard from '../components/settings/ReminderCard';
+import DigestCard from '../components/settings/DigestCard';
 import AccountCard from '../components/settings/AccountCard';
 import BackupCard from '../components/settings/BackupCard';
 import AboutCard from '../components/settings/AboutCard';
@@ -30,6 +31,9 @@ interface SettingsData {
   feishuConnected: boolean;
   reminderMinutes: number;
   reminderEnabled: boolean;
+  digestEnabled: boolean;
+  digestHour: number;
+  digestAi: boolean;
   semesterName: string;
   semesterStart: string;
   semesterEnd: string;
@@ -45,6 +49,7 @@ export default function SettingsPage() {
     feishuOpenId: '', feishuAppId: '', feishuAppSecret: '',
     feishuConfigured: false, feishuConnected: false,
     reminderMinutes: 15, reminderEnabled: true,
+    digestEnabled: true, digestHour: 8, digestAi: true,
     semesterName: '', semesterStart: '', semesterEnd: '',
     mentalReportCollege: '',
   });
@@ -60,6 +65,7 @@ export default function SettingsPage() {
         feishuAppSecret: d.feishuAppSecret || '',
         feishuConfigured: d.feishuConfigured || false, feishuConnected: d.feishuConnected || false,
         reminderMinutes: d.reminderMinutes || 15, reminderEnabled: d.reminderEnabled !== false,
+        digestEnabled: d.digestEnabled !== false, digestHour: d.digestHour || 8, digestAi: d.digestAi !== false,
         semesterName: d.semesterName || '', semesterStart: d.semesterStart || '',
         semesterEnd: d.semesterEnd || '',
         mentalReportCollege: d.mentalReportCollege || '',
@@ -132,6 +138,12 @@ export default function SettingsPage() {
           enabled={data.reminderEnabled} minutes={data.reminderMinutes}
           onToggle={async (enabled) => { set('reminderEnabled', enabled); await put({ reminderEnabled: enabled }); }}
           onSaveMinutes={async (m) => { set('reminderMinutes', m); await put({ reminderMinutes: m }); }}
+        />
+        <DigestCard
+          enabled={data.digestEnabled} hour={data.digestHour} ai={data.digestAi}
+          onToggle={async (enabled) => { set('digestEnabled', enabled); await put({ digestEnabled: enabled }); }}
+          onSaveHour={async (hour) => { set('digestHour', hour); await put({ digestHour: hour }); }}
+          onToggleAi={async (ai) => { set('digestAi', ai); await put({ digestAi: ai }); }}
         />
         <AccountCard
           email={user?.email || ''} name={profileName}

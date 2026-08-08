@@ -28,14 +28,18 @@ async function checkAndDigest(): Promise<void> {
     const allSettings = await settingsService.getAllSettings();
     const digestHour = parseInt(allSettings.digest_hour || String(DEFAULT_HOUR));
     const digestEnabled = allSettings.digest_enabled !== 'false';
+    const digestAi = allSettings.digest_ai !== 'false';
 
     if (!digestEnabled) return;
 
     const now = new Date();
-    // 触发窗口：当小时 == digestHour 且在前 5 分钟内（比原来 2 分钟更宽，避免重启漏发）
-    if (now.getHours() !== digestHour || now.getMinutes() > 5) return;
+    // 未到推送时刻不处理；到达 digestHour 之后任意时刻均可触发（当天补发一次，避免服务在
+    // 窗口外启动导致简报永久漏发）。补发通过下方 reminderLog「当天未发过」去重保证一天一次。
+    if (now.getHours() < digestHour) return;
 
-    const today = now.toISOString().slice(0, 10);
+    // 使用本地时区的日期（toISOString 是 UTC，跨零点时会差一天）
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+    const today = local.toISOString().slice(0, 10);
     const users = await prisma.user.findMany();
 
     for (const user of users) {
@@ -74,8 +78,8 @@ async function checkAndDigest(): Promise<void> {
 
       if (tasks.length === 0 && overdueTasks.length === 0) continue;
 
-      // Generate summary
-      const summary = await generateSummary(tasks, today);
+      // 简报内容：开启 AI 时用大模型生成（无 Key 自动回退简单版），关闭时直接用简单版
+      const summary = digestAi ? await generateSummary(tasks, today) : buildSimpleSummary(tasks, today);
       const overdueSection = overdueTasks.length > 0
         ? `\n\n🔴 逾期任务（${overdueTasks.length}）\n${overdueTasks.map((t) =>
             `  ⚠️ ${t.title}${t.dueDate ? `（截止 ${new Date(t.dueDate).toISOString().slice(0, 10)}）` : ''}`
