@@ -147,7 +147,6 @@ export default function DashboardPage() {
         {/* 装饰光斑 */}
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 right-1/3 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
-        <div className="pointer-events-none absolute right-6 top-6 text-7xl opacity-10">📅</div>
 
         <div className="relative flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -189,7 +188,6 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="hidden max-w-[220px] flex-col items-end gap-2 sm:flex">
-            <span className="text-2xl leading-none">💭</span>
             <p className="text-right text-sm italic leading-relaxed text-white/90">“{quote}”</p>
           </div>
         </div>

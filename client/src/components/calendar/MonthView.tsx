@@ -97,7 +97,7 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
                       isOverdue(task) ? 'bg-red-500' : 'bg-brand-600'
                     }`}
                   >
-                    {isOverdue(task) ? '🔴 ' : ''}{task.title}
+                    {isOverdue(task) ? '' : ''}{task.title}
                   </div>
                 ))}
                 {dayTasks.length > 2 && (

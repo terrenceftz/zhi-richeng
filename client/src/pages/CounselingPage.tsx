@@ -159,7 +159,7 @@ export default function CounselingPage() {
           {!stats ? (
             <p className="text-sm text-slate-400">加载中...</p>
           ) : stats.notCounseled.length === 0 ? (
-            <EmptyState icon={<HeartHandshake className="h-8 w-8" />} title="全员已谈心 🎉" />
+            <EmptyState icon={<HeartHandshake className="h-8 w-8" />} title="全员已谈心 " />
           ) : (
             <div className="max-h-[420px] space-y-1.5 overflow-y-auto pr-1">
               {stats.notCounseled.slice(0, 60).map((s) => (
@@ -463,7 +463,7 @@ function CounselingFormModal({
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" size="sm" variant="ghost" onClick={loadOutline} disabled={outlineLoading || !studentId}>
               <Sparkles className="mr-1 h-3.5 w-3.5" />
-              {outlineLoading ? '生成中...' : '✨ 生成谈话提纲'}
+              {outlineLoading ? '生成中...' : '生成谈话提纲'}
             </Button>
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Input
@@ -484,7 +484,7 @@ function CounselingFormModal({
             </div>
           )}
           <p className="mt-2 text-[11px] text-violet-500 dark:text-violet-400">
-            🔒 仅发送脱敏摘要（不包含证件号、手机号、住址、家长电话）
+            仅发送脱敏摘要（不包含证件号、手机号、住址、家长电话）
           </p>
         </div>
         <div className="space-y-1.5">

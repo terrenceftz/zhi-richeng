@@ -15,7 +15,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="min-h-screen flex items-center justify-center bg-bg p-8">
           <div className="bg-white border-2 border-black rounded-2xl p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-w-md text-center">
-            <h1 className="text-2xl font-black mb-2">😵 出了点问题</h1>
+            <h1 className="text-2xl font-black mb-2">出了点问题</h1>
             <p className="text-sm font-bold opacity-50 mb-4">页面遇到意外错误，请刷新重试</p>
             <button
               onClick={() => window.location.reload()}

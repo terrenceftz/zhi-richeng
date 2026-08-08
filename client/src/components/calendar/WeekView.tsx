@@ -82,7 +82,7 @@ export default function WeekView({ selectedDate, tasks, onTaskClick }: WeekViewP
                       : prioritySoft[task.priority] || prioritySoft.medium
                   }`}
                 >
-                  {isOverdue(task) ? '🔴 ' : ''}{task.title}
+                  {isOverdue(task) ? '' : ''}{task.title}
                 </div>
               ))}
               {dayTasks.length > 3 && <p className="pl-2 text-xs text-slate-400">+{dayTasks.length - 3} 项</p>}

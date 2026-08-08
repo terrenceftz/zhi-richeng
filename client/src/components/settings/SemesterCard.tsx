@@ -31,7 +31,7 @@ export default function SemesterCard({ name: initialName, start: initialStart, e
   };
 
   return (
-    <Card title="📅 学期配置" subtitle="设置学期起止日期，首页自动显示当前教学周">
+    <Card title="学期配置" subtitle="设置学期起止日期，首页自动显示当前教学周">
       <div className="space-y-3">
         <Input label="学期名称" id="semesterName" value={name} onChange={(e) => setName(e.target.value)} placeholder="如：2025-2026学年第二学期" />
         <Input label="学期起始（第一周周一）" id="semesterStart" type="date" value={start} onChange={(e) => setStart(e.target.value)} />

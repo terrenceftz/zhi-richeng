@@ -37,7 +37,7 @@ export default function DayView({ date, tasks, onTaskClick }: DayViewProps) {
         <span className={`text-base font-semibold ${isStatutory ? 'text-red-500' : 'text-slate-900 dark:text-slate-100'}`}>{date}</span>
         {isStatutory && holiday && (
           <span className="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-500 dark:border-red-500/30 dark:bg-red-500/10">
-            🏖️ {holiday.name}
+            {holiday.name}
           </span>
         )}
         {isWeekend && (
@@ -60,7 +60,7 @@ export default function DayView({ date, tasks, onTaskClick }: DayViewProps) {
 
       {timedTasks.length === 0 && allDayTasks.length === 0 ? (
         <p className="py-8 text-center text-sm text-slate-400">
-          {isStatutory ? '🏖️ 节假日，好好休息！' : '当天没有日程安排'}
+          {isStatutory ? '节假日，好好休息！' : '当天没有日程安排'}
         </p>
       ) : (
         <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
@@ -82,7 +82,7 @@ export default function DayView({ date, tasks, onTaskClick }: DayViewProps) {
                       }`}
                     >
                       <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: isOverdue(task) ? '#ef4444' : PRIORITY_COLORS[task.priority] }} />
-                      <span className={`truncate font-medium ${isOverdue(task) ? 'line-through' : ''}`}>{isOverdue(task) ? '🔴 ' : ''}{task.title}</span>
+                      <span className={`truncate font-medium ${isOverdue(task) ? 'line-through' : ''}`}>{isOverdue(task) ? '' : ''}{task.title}</span>
                       {task.dueTime && <span className="ml-auto text-xs opacity-70">{task.dueTime}</span>}
                     </div>
                   ))}

@@ -748,11 +748,11 @@ function MentalTab({ studentId, profile, records, loading, onChanged, onProfileS
                     <span className="text-xs text-slate-400">{new Date(r.date).toLocaleDateString('zh-CN')}</span>
                   </div>
                   <p className="text-sm text-slate-700 dark:text-slate-200">{r.situation}</p>
-                  {r.action && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">🛠 干预：{r.action}</p>}
-                  {r.followUp && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">📋 跟进：{r.followUp}</p>}
+                  {r.action && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">干预：{r.action}</p>}
+                  {r.followUp && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">跟进：{r.followUp}</p>}
                   {r.followUpDate && (
                     <p className="mt-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
-                      📅 下次跟进：{new Date(r.followUpDate).toLocaleDateString('zh-CN')}
+                      下次跟进：{new Date(r.followUpDate).toLocaleDateString('zh-CN')}
                     </p>
                   )}
                   <div className="mt-2 flex gap-2">

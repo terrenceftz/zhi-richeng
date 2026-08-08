@@ -229,7 +229,7 @@ export default function MentalPage() {
                   <div key={a.studentId} className="flex items-center justify-between gap-2 text-xs">
                     <span className="min-w-0 truncate text-red-700 dark:text-red-300">
                       {a.name}（{a.concernLevel}级）已 {a.daysSince} 天未跟进
-                      {a.extraRisk ? ' ⚠️ 经济困难+心理' : ''}
+                      {a.extraRisk ? ' 经济困难+心理' : ''}
                     </span>
                     <button
                       onClick={() => { const s = students.find((x) => x.id === a.studentId); if (s) { setEditing(s); setDrawerOpen(true); } }}
@@ -284,10 +284,10 @@ export default function MentalPage() {
                 </div>
 
                 <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
-                  {p?.isPoverty && <p>💰 家庭经济困难生</p>}
-                  {p?.includedAt && <p>📅 纳入：{new Date(p.includedAt).toISOString().slice(0, 10)}</p>}
-                  {p?.followUpPerson && <p>👤 跟进人：{p.followUpPerson}</p>}
-                  {p?.parentInformed && <p>👪 家长知情{p?.parentPhone ? ` · ${p.parentPhone}` : ''}</p>}
+                  {p?.isPoverty && <p>家庭经济困难生</p>}
+                  {p?.includedAt && <p>纳入：{new Date(p.includedAt).toISOString().slice(0, 10)}</p>}
+                  {p?.followUpPerson && <p>跟进人：{p.followUpPerson}</p>}
+                  {p?.parentInformed && <p>家长知情{p?.parentPhone ? ` · ${p.parentPhone}` : ''}</p>}
                   {!p?.isPoverty && !p?.includedAt && !p?.followUpPerson && !p?.parentInformed && (
                     <p className="text-slate-400">档案未完善，点击编辑</p>
                   )}
@@ -543,7 +543,7 @@ function FollowUpTimeline({ studentId, records, onChanged }: {
           </p>
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-200">{advice}</div>
           <p className="mt-2 border-t border-violet-200 pt-1.5 text-[11px] leading-relaxed text-violet-500 dark:border-violet-500/20 dark:text-violet-400">
-            🔒 仅发送与关怀相关的脱敏摘要（姓名/班级/档案/跟进与谈心记录）；证件号、手机号、住址、家长电话等敏感信息不会发送。
+            仅发送与关怀相关的脱敏摘要（姓名/班级/档案/跟进与谈心记录）；证件号、手机号、住址、家长电话等敏感信息不会发送。
           </p>
         </div>
       )}
@@ -574,11 +574,11 @@ function FollowUpTimeline({ studentId, records, onChanged }: {
                 <button onClick={() => handleDelete(r.id)} className="text-xs text-slate-400 hover:text-red-500">删除</button>
               </div>
               <p className="text-sm text-slate-700 dark:text-slate-200">{r.situation}</p>
-              {r.action && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">🛠 措施：{r.action}</p>}
-              {r.followUp && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">📋 下一步：{r.followUp}</p>}
+              {r.action && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">措施：{r.action}</p>}
+              {r.followUp && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">下一步：{r.followUp}</p>}
               {r.followUpDate && (
                 <p className="mt-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
-                  📅 下次跟进：{new Date(r.followUpDate).toLocaleDateString('zh-CN')}
+                  下次跟进：{new Date(r.followUpDate).toLocaleDateString('zh-CN')}
                 </p>
               )}
             </div>

@@ -43,7 +43,7 @@ export default function BackupCard() {
     }
 
     const confirmed = window.confirm(
-      '⚠️ 恢复备份将覆盖当前所有数据，此操作不可撤销！\n\n系统会在恢复前自动备份当前数据，但建议你手动下载一份备份以防万一。\n\n确定要继续吗？'
+      '恢复备份将覆盖当前所有数据，此操作不可撤销！\n\n系统会在恢复前自动备份当前数据，但建议你手动下载一份备份以防万一。\n\n确定要继续吗？'
     );
     if (!confirmed) {
       if (fileRef.current) fileRef.current.value = '';
