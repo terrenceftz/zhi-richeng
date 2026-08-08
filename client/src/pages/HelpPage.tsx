@@ -1,6 +1,7 @@
 import { Bot, BookOpenText, MessageCircleQuestion, Lightbulb, CalendarClock, HeartHandshake, Search, Newspaper, Link2 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import { KirbyTitleIcon } from '../components/theme/KirbyDecorations';
 
 interface Example {
   /** 用户输入（发给飞书机器人） */
@@ -80,7 +81,7 @@ export default function HelpPage() {
   return (
     <div>
       <h2 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-        <BookOpenText className="h-6 w-6 text-brand-500" />
+        <KirbyTitleIcon icon={BookOpenText} sticker="kirbyHi" className="text-brand-500" />
         使用指南 · 飞书互动
       </h2>
       <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">

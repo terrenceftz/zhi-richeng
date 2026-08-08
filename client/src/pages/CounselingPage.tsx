@@ -5,6 +5,7 @@ import { fetchStudents } from '../api/students';
 import type { Counseling, Student } from '../types';
 import { COUNSELING_TYPES } from '../types';
 import Card from '../components/ui/Card';
+import { KirbyHeaderSticker, KirbyCornerSticker } from '../components/theme/KirbyDecorations';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Input, { Select, Textarea } from '../components/ui/Input';
@@ -95,7 +96,10 @@ export default function CounselingPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">谈心记录</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
+            <KirbyHeaderSticker sticker="kirbyWink" />
+            谈心记录
+          </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             本学期：{stats?.range.start} ~ {stats?.range.end} · 与台账、学生档案联动
           </p>
@@ -223,8 +227,9 @@ export default function CounselingPage() {
                 return (
                   <div
                     key={r.id}
-                    className="group flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 transition-colors hover:border-brand-300 dark:border-slate-800 dark:hover:border-brand-500/40"
+                    className="group relative flex items-center justify-between gap-3 overflow-hidden rounded-lg border border-slate-200 px-3 py-2 transition-colors hover:border-brand-300 dark:border-slate-800 dark:hover:border-brand-500/40"
                   >
+                    <KirbyCornerSticker sticker="kirbyWink" className="absolute -right-2 -top-3 h-12 w-12 rotate-12 opacity-20" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{s?.name || '未知学生'}</span>

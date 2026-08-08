@@ -3,6 +3,7 @@ import { BarChart3, Heart, MessageSquareText, ClipboardList, AlertTriangle, Bell
 import * as statsApi from '../api/stats';
 import type { StatsData } from '../api/stats';
 import Card from '../components/ui/Card';
+import { KirbyTitleIcon } from '../components/theme/KirbyDecorations';
 import Button from '../components/ui/Button';
 import { LoadingState } from '../components/ui/Feedback';
 import { useToastStore } from '../stores/toastStore';
@@ -53,7 +54,7 @@ export default function StatsPage() {
   return (
     <div>
       <h2 className="mb-6 flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-        <BarChart3 className="h-6 w-6 text-brand-500" />
+        <KirbyTitleIcon icon={BarChart3} sticker="starCute" className="text-brand-500" />
         数据看板
       </h2>
 

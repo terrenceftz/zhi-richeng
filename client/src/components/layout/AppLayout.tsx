@@ -3,12 +3,14 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { Menu } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
+import { KirbyPageDecorations } from '../theme/KirbyDecorations';
 
 export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <div className="relative flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+      <KirbyPageDecorations />
       {/* 桌面侧边栏 */}
       <div className="hidden lg:flex lg:w-64 lg:shrink-0">
         <Sidebar />
@@ -25,7 +27,7 @@ export default function AppLayout() {
       )}
 
       {/* 主区域 */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="relative flex flex-1 flex-col overflow-hidden">
         {/* 移动端顶栏 */}
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900 lg:hidden">
           <button
@@ -39,8 +41,8 @@ export default function AppLayout() {
           <ThemeToggle />
         </header>
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main className="relative flex-1 overflow-y-auto">
+          <div className="relative mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             <Outlet />
           </div>
         </main>

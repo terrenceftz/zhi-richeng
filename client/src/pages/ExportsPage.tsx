@@ -4,6 +4,7 @@ import client from '../api/client';
 import * as mentalApi from '../api/mental';
 import * as statsApi from '../api/stats';
 import Card from '../components/ui/Card';
+import { KirbyTitleIcon, KirbyCornerSticker } from '../components/theme/KirbyDecorations';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import { useToastStore } from '../stores/toastStore';
@@ -121,7 +122,7 @@ export default function ExportsPage() {
   return (
     <div>
       <h2 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-        <FileSpreadsheet className="h-6 w-6 text-brand-500" />
+        <KirbyTitleIcon icon={FileSpreadsheet} sticker="cakeSmall" className="text-brand-500" />
         报表导出中心
       </h2>
       <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
@@ -133,7 +134,8 @@ export default function ExportsPage() {
           const Icon = item.icon;
           const isBusy = busy === item.key;
           return (
-            <Card key={item.key} hoverable className="flex flex-col">
+            <Card key={item.key} hoverable className="relative flex flex-col overflow-hidden">
+              <KirbyCornerSticker sticker="starCute" className="absolute -right-3 -top-4 h-16 w-16 rotate-12 opacity-25" />
               <div className="mb-3 flex items-start justify-between">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
                   <Icon className="h-5 w-5" />

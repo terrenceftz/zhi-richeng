@@ -1,6 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useThemeStore } from '../../stores/themeStore';
+import { KIRBY_STICKERS } from '../theme/KirbyDecorations';
 
 interface ModalProps {
   open: boolean;
@@ -18,6 +20,7 @@ const sizeMap = {
 
 export default function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const isKirby = useThemeStore((s) => s.palette === 'kirby');
 
   useEffect(() => {
     if (!open) return;
@@ -57,8 +60,13 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
           >
-            <div className="mb-4 flex items-center justify-between">
-              {title && <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>}
+            <div className="mb-4 flex items-center justify-between gap-2">
+              {title && (
+                <div className="flex min-w-0 items-center gap-2">
+                  {isKirby && <img src={KIRBY_STICKERS.kirbyWink} alt="" aria-hidden className="h-6 w-6 shrink-0 object-contain" />}
+                  <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+                </div>
+              )}
               <button
                 onClick={onClose}
                 aria-label="关闭"

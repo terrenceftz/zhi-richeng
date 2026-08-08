@@ -41,6 +41,12 @@ function applyTheme(theme: Theme, palette: Palette) {
   root.classList.toggle('light', theme === 'light');
   root.style.colorScheme = theme;
   root.dataset.palette = palette;
+
+  const favicon = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+  if (favicon) {
+    favicon.href = palette === 'kirby' ? '/themes/kirby/icon.png' : '/favicon.svg';
+    favicon.type = palette === 'kirby' ? 'image/png' : 'image/svg+xml';
+  }
 }
 
 function getStored<T extends string>(key: string, valid: readonly T[], fallback: T): T {

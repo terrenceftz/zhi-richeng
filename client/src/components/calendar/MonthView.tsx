@@ -39,14 +39,14 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
 
   return (
     <div>
-      <div className="mb-2 grid grid-cols-7 gap-1">
+      <div className="mb-2 grid grid-cols-7 gap-1 md:gap-1.5">
         {['日', '一', '二', '三', '四', '五', '六'].map((d) => (
-          <div key={d} className="py-2 text-center text-xs font-medium text-slate-400 dark:text-slate-500">{d}</div>
+          <div key={d} className="py-2 text-center text-xs font-medium text-slate-400 dark:text-slate-500 md:text-sm">{d}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1 md:gap-1.5">
         {days.map((d, i) => {
-          if (d === null) return <div key={i} className="aspect-square rounded-lg bg-slate-50/50 dark:bg-slate-900/50" />;
+          if (d === null) return <div key={i} className="min-h-[3.25rem] rounded-lg bg-slate-50/50 dark:bg-slate-900/50 md:min-h-[5.25rem]" />;
           const ds = fmt(d);
           const holiday = getHoliday(ds);
           const dayTasks = tasksByDate[ds] || [];
@@ -59,7 +59,7 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
             <div
               key={i}
               onClick={() => onDateSelect(ds)}
-              className={`aspect-square cursor-pointer overflow-hidden rounded-lg border p-1 transition-colors ${
+              className={`min-h-[3.25rem] cursor-pointer overflow-hidden rounded-lg border p-1 transition-colors md:min-h-[5.25rem] md:p-1.5 ${
                 isSelected
                   ? 'border-brand-500 bg-brand-50 dark:bg-brand-500/10'
                   : isToday
@@ -71,9 +71,9 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
             >
               <div className="mb-0.5 flex items-center gap-0.5 px-0.5">
                 <span
-                  className={`text-xs font-medium ${
+                  className={`text-xs font-medium md:text-sm ${
                     isToday
-                      ? 'flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white'
+                      ? 'flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white md:h-6 md:w-6'
                       : isStatutory
                         ? 'text-red-500'
                         : isRestDay
@@ -84,7 +84,7 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
                   {d}
                 </span>
                 {isStatutory && holiday && (
-                  <span className="truncate text-[9px] font-medium leading-none text-red-400">{holiday.name}</span>
+                  <span className="truncate text-[9px] font-medium leading-none text-red-400 md:text-[10px]">{holiday.name}</span>
                 )}
               </div>
 
@@ -93,15 +93,15 @@ export default function MonthView({ year, month, selectedDate, tasks, onTaskClic
                   <div
                     key={task.id}
                     onClick={(e) => { e.stopPropagation(); onTaskClick(task); }}
-                    className={`truncate rounded px-1 py-0.5 text-[10px] font-medium text-white ${
+                    className={`truncate rounded px-1 py-0.5 text-[10px] font-medium text-white md:text-[11px] ${
                       isOverdue(task) ? 'bg-red-500' : 'bg-brand-600'
                     }`}
                   >
-                    {isOverdue(task) ? '' : ''}{task.title}
+                    {task.title}
                   </div>
                 ))}
                 {dayTasks.length > 2 && (
-                  <div className="px-1 text-[10px] text-slate-400">+{dayTasks.length - 2}</div>
+                  <div className="px-1 text-[10px] text-slate-400 md:text-[11px]">+{dayTasks.length - 2}</div>
                 )}
               </div>
             </div>

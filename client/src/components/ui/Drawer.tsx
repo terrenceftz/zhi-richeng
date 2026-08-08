@@ -1,6 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useThemeStore } from '../../stores/themeStore';
+import { KIRBY_STICKERS } from '../theme/KirbyDecorations';
 
 interface DrawerProps {
   open: boolean;
@@ -12,6 +14,7 @@ interface DrawerProps {
 
 export default function Drawer({ open, onClose, children, title, width = 'max-w-md' }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
+  const isKirby = useThemeStore((s) => s.palette === 'kirby');
 
   useEffect(() => {
     if (!open) return;
@@ -50,8 +53,11 @@ export default function Drawer({ open, onClose, children, title, width = 'max-w-
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+              <div className="flex min-w-0 items-center gap-2">
+                {isKirby && <img src={KIRBY_STICKERS.kirbyWink} alt="" aria-hidden className="h-6 w-6 shrink-0 object-contain" />}
+                <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+              </div>
               <button
                 onClick={onClose}
                 aria-label="关闭"

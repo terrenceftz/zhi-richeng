@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import type { Student, MentalRecord, RiskAlert } from '../types';
 import { MENTAL_CATEGORIES, CONCERN_LEVEL_LABELS } from '../types';
 import Card from '../components/ui/Card';
+import { KirbyTitleIcon, KirbyCornerSticker } from '../components/theme/KirbyDecorations';
 import Button from '../components/ui/Button';
 import Input, { Select, Textarea } from '../components/ui/Input';
 import Drawer from '../components/ui/Drawer';
@@ -146,7 +147,7 @@ export default function MentalPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-          <Heart className="h-6 w-6 fill-red-500 text-red-500" />
+          <KirbyTitleIcon icon={Heart} sticker="bow" className="fill-red-500 text-red-500" />
           心理台账
         </h2>
         <div className="flex flex-wrap items-center gap-2">
@@ -258,7 +259,8 @@ export default function MentalPage() {
             const p = s.mentalProfile;
             const level = p?.concernLevel || 1;
             return (
-              <Card key={s.id} hoverable className="cursor-pointer" onClick={() => { setEditing(s); setDrawerOpen(true); }}>
+              <Card key={s.id} hoverable className="relative cursor-pointer overflow-hidden" onClick={() => { setEditing(s); setDrawerOpen(true); }}>
+                <KirbyCornerSticker sticker="kirbySit" className="absolute -right-3 -top-4 h-16 w-16 rotate-12 opacity-25" />
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-sm font-semibold text-red-700 dark:bg-red-500/15 dark:text-red-300">

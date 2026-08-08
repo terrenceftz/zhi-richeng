@@ -4,6 +4,7 @@ import * as noticesApi from '../api/notices';
 import type { Notice } from '../types';
 import { NOTICE_STATUS_LABELS } from '../types';
 import Card from '../components/ui/Card';
+import { KirbyTitleIcon, KirbyCornerSticker } from '../components/theme/KirbyDecorations';
 import Button from '../components/ui/Button';
 import Input, { Textarea } from '../components/ui/Input';
 import Drawer from '../components/ui/Drawer';
@@ -83,7 +84,7 @@ export default function NoticesPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-          <Bell className="h-6 w-6 text-brand-500" />
+          <KirbyTitleIcon icon={Bell} sticker="candy" className="text-brand-500" />
           通知与材料上报
         </h2>
         <div className="flex items-center gap-2">
@@ -136,7 +137,8 @@ function NoticeCard({ notice, onEdit, onDelete, onToggleMaterial }: {
   const overdue = notice.deadline && new Date(notice.deadline) < new Date() && notice.status !== 'done';
 
   return (
-    <Card hoverable className="cursor-pointer" onClick={onEdit}>
+    <Card hoverable className="relative cursor-pointer overflow-hidden" onClick={onEdit}>
+      <KirbyCornerSticker sticker="candy" className="absolute -right-3 -top-4 h-16 w-16 rotate-12 opacity-25" />
       <div className="mb-2 flex items-start justify-between gap-2">
         <h4 className="text-sm font-medium leading-snug text-slate-900 dark:text-slate-100">{notice.title}</h4>
         <button onClick={(e) => { e.stopPropagation(); onDelete(); }} aria-label="删除" className="shrink-0 rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10">

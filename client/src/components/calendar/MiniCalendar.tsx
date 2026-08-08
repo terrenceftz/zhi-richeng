@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTaskStore } from '../../stores/taskStore';
 import { getHoliday } from '../../utils/holidays';
+import { KirbyMiniCalendarDecorations } from '../theme/KirbyDecorations';
 
 interface MiniCalendarProps {
   onDateSelect?: (date: string) => void;
@@ -59,8 +60,9 @@ export default function MiniCalendar({ onDateSelect }: MiniCalendarProps) {
   const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-800 dark:bg-slate-900">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-800 dark:bg-slate-900">
+      <KirbyMiniCalendarDecorations />
+      <div className="relative mb-3 flex items-center justify-between">
         <button
           onClick={() => changeMonth(-1)}
           aria-label="上个月"

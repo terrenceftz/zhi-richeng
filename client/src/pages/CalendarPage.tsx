@@ -7,6 +7,7 @@ import DayView from '../components/calendar/DayView';
 import WeekView from '../components/calendar/WeekView';
 import MonthView from '../components/calendar/MonthView';
 import TaskDetailDrawer from '../components/tasks/TaskDetailDrawer';
+import { KirbyCalendarPanelDecorations, KirbyPageDecorations } from '../components/theme/KirbyDecorations';
 
 type ViewMode = 'day' | 'week' | 'month';
 
@@ -51,6 +52,7 @@ export default function CalendarPage() {
           className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.08]"
         />
       )}
+      <KirbyPageDecorations />
       <div className="relative">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
@@ -74,7 +76,9 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+        <KirbyCalendarPanelDecorations />
+        <div className="relative">
         {viewMode === 'day' && <DayView date={selectedDate} tasks={tasks} onTaskClick={handleTaskClick} />}
         {viewMode === 'week' && <WeekView selectedDate={selectedDate} tasks={tasks} onTaskClick={handleTaskClick} />}
         {viewMode === 'month' && (
@@ -87,6 +91,7 @@ export default function CalendarPage() {
             onDateSelect={handleDateSelect}
           />
         )}
+        </div>
       </div>
 
       <TaskDetailDrawer task={selectedTask} open={drawerOpen} onClose={() => setDrawerOpen(false)} />

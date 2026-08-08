@@ -4,6 +4,7 @@ import { ListChecks, CalendarDays, ChevronRight, Plus, GraduationCap, Bell, Aler
 import { Link } from 'react-router-dom';
 import { useTaskStore } from '../stores/taskStore';
 import { useAuthStore } from '../stores/authStore';
+import { useThemeStore } from '../stores/themeStore';
 import type { Task } from '../types';
 import { getNextHolidayCountdown } from '../utils/holidays';
 import { getTeachingWeek, getBreakCountdown, type SemesterConfig } from '../utils/academicCalendar';
@@ -19,10 +20,12 @@ import Drawer from '../components/ui/Drawer';
 import { EmptyState, LoadingState } from '../components/ui/Feedback';
 import Card from '../components/ui/Card';
 import { fetchWallpaper, type BingWallpaper } from '../api/wallpaper';
+import { KirbyCornerSticker, KirbyHeroDecorations } from '../components/theme/KirbyDecorations';
 
 export default function DashboardPage() {
   const { tasks, selectedDate, isLoading, fetchTasks, createTask, deleteTask, setSelectedDate } = useTaskStore();
   const { user } = useAuthStore();
+  const isKirby = useThemeStore((s) => s.palette === 'kirby');
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -147,6 +150,7 @@ export default function DashboardPage() {
         {/* 装饰光斑 */}
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 right-1/3 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
+        <KirbyHeroDecorations />
 
         <div className="relative flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -233,7 +237,7 @@ export default function DashboardPage() {
                 className="mt-3 space-y-2 overflow-hidden"
               >
                 {overdueTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onClick={() => handleTaskClick(task)} />
+                  <KirbyTaskCard key={task.id} task={task} onClick={() => handleTaskClick(task)} />
                 ))}
               </motion.div>
             )}
@@ -242,11 +246,22 @@ export default function DashboardPage() {
       )}
 
       {/* 快捷入口 */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <QuickLink to="/students" icon={<GraduationCap className="h-5 w-5" />} label="学生管理" />
-        <QuickLink to="/notices" icon={<Bell className="h-5 w-5" />} label="通知看板" />
-        <QuickLink to="/calendar" icon={<CalendarDays className="h-5 w-5" />} label="日历视图" />
-        <QuickLink to="/inspiration" icon={<ListChecks className="h-5 w-5" />} label="灵感记录" />
+      <div className="mb-7 grid grid-cols-2 gap-x-4 gap-y-5 py-2 sm:grid-cols-4">
+        {isKirby ? (
+          <>
+            <QuickLink to="/students" icon={<GraduationCap className="h-5 w-5" />} label="学生管理" sticker="kirbySit" kirby />
+            <QuickLink to="/notices" icon={<Bell className="h-5 w-5" />} label="通知看板" sticker="bow" kirby />
+            <QuickLink to="/calendar" icon={<CalendarDays className="h-5 w-5" />} label="日历视图" sticker="starCute" kirby />
+            <QuickLink to="/inspiration" icon={<ListChecks className="h-5 w-5" />} label="灵感记录" sticker="candy" kirby />
+          </>
+        ) : (
+          <>
+            <QuickLink to="/students" icon={<GraduationCap className="h-5 w-5" />} label="学生管理" />
+            <QuickLink to="/notices" icon={<Bell className="h-5 w-5" />} label="通知看板" />
+            <QuickLink to="/calendar" icon={<CalendarDays className="h-5 w-5" />} label="日历视图" />
+            <QuickLink to="/inspiration" icon={<ListChecks className="h-5 w-5" />} label="灵感记录" />
+          </>
+        )}
       </div>
 
       <SmartBar />
@@ -270,8 +285,8 @@ export default function DashboardPage() {
               {todayActive.length > 0 ? (
                 <motion.div layout className="space-y-2">
                   {todayActive.map((task) => (
-                    <motion.div key={task.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                      <TaskCard task={task} onClick={() => handleTaskClick(task)} />
+                  <motion.div key={task.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                      <KirbyTaskCard task={task} onClick={() => handleTaskClick(task)} />
                     </motion.div>
                   ))}
                 </motion.div>
@@ -290,7 +305,7 @@ export default function DashboardPage() {
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-2 overflow-hidden">
                         {todayDone.map((task) => (
                           <motion.div key={task.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                            <TaskCard task={task} onClick={() => handleTaskClick(task)} />
+                            <KirbyTaskCard task={task} onClick={() => handleTaskClick(task)} />
                           </motion.div>
                         ))}
                       </motion.div>
@@ -307,7 +322,7 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 {unscheduledActive.map((task) => (
                   <motion.div key={task.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <TaskCard task={task} onClick={() => handleTaskClick(task)} />
+                    <KirbyTaskCard task={task} onClick={() => handleTaskClick(task)} />
                   </motion.div>
                 ))}
               </div>
@@ -318,8 +333,9 @@ export default function DashboardPage() {
         {/* 侧栏 */}
         <div className="w-full shrink-0 space-y-4 lg:w-72">
           <MiniCalendar onDateSelect={handleDateSelect} />
-          <Card>
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">今日完成率</p>
+          <Card className="relative overflow-hidden">
+            <KirbyCornerSticker sticker="kirbyWalk" className="absolute -right-3 -top-4 h-20 w-20 opacity-50" />
+            <p className="relative mb-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">今日完成率</p>
             <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{completionRate}%</p>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
               <div className="h-full rounded-full bg-brand-600 transition-all duration-500" style={{ width: `${completionRate}%` }} />
@@ -346,16 +362,50 @@ export default function DashboardPage() {
   );
 }
 
-function QuickLink({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+function QuickLink({ to, icon, label, sticker, kirby }: { to: string; icon: React.ReactNode; label: string; sticker?: React.ComponentProps<typeof KirbyCornerSticker>['sticker']; kirby?: boolean }) {
+  if (!kirby) {
+    return (
+      <Link
+        to={to}
+        className="flex min-h-[86px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm transition-all hover:border-brand-300 hover:shadow-card-hover dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-500/40"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+          {icon}
+        </span>
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{label}</span>
+      </Link>
+    );
+  }
+
   return (
     <Link
       to={to}
-      className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-brand-300 hover:shadow-card-hover dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-500/40"
+      className="group relative flex min-h-[86px] items-center gap-3 rounded-xl border border-slate-200 bg-white py-3 pl-3 pr-24 shadow-sm transition-all hover:border-brand-300 hover:shadow-card-hover dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-500/40"
     >
       <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
         {icon}
       </span>
-      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{label}</span>
+      <span className="relative text-sm font-medium text-slate-700 dark:text-slate-200">{label}</span>
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 rounded-l-[1.15rem] bg-gradient-to-br from-pink-50 via-white to-pink-100/80 dark:from-pink-500/10 dark:via-slate-900 dark:to-pink-500/5" />
+      {sticker && <KirbyCornerSticker sticker={sticker} className="absolute -right-1 top-1/2 h-[4.25rem] w-[4.25rem] -translate-y-1/2 rotate-6 opacity-95" />}
     </Link>
+  );
+}
+
+const TASK_STICKERS = ['kirbyWink', 'starCute', 'cakeSmall', 'kirbySit', 'bow'] as const;
+
+function KirbyTaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
+  const isKirby = useThemeStore((s) => s.palette === 'kirby');
+  if (!isKirby) return <TaskCard task={task} onClick={onClick} />;
+
+  // 按任务 id 稳定轮换贴纸，避免所有任务卡都是同一张
+  const hash = task.id.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const sticker = TASK_STICKERS[hash % TASK_STICKERS.length];
+
+  return (
+    <div className="relative">
+      <TaskCard task={task} onClick={onClick} />
+      <KirbyCornerSticker sticker={sticker} className="absolute -bottom-1.5 right-1.5 h-14 w-14 rotate-[-8deg] opacity-25" />
+    </div>
   );
 }

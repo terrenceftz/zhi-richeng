@@ -7,6 +7,7 @@ import * as mentalApi from '../api/mental';
 import type { Student, Counseling, MentalRecord, MentalProfile } from '../types';
 import { COUNSELING_TYPES, STUDENT_TYPES, STUDENT_TYPE_LABELS, MENTAL_LEVELS, MENTAL_LEVEL_LABELS, MENTAL_STATUS_LABELS, MENTAL_CATEGORIES, CONCERN_LEVEL_LABELS } from '../types';
 import Card from '../components/ui/Card';
+import { KirbyTitleIcon } from '../components/theme/KirbyDecorations';
 import Button from '../components/ui/Button';
 import Input, { Select, Textarea } from '../components/ui/Input';
 import Drawer from '../components/ui/Drawer';
@@ -159,7 +160,7 @@ export default function StudentsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-          <GraduationCap className="h-6 w-6 text-brand-500" />
+          <KirbyTitleIcon icon={GraduationCap} sticker="kirbySit" className="text-brand-500" />
           学生管理
         </h2>
         <div className="flex flex-wrap items-center gap-2">

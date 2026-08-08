@@ -4,6 +4,7 @@ import { Lightbulb, Send, Smartphone, Monitor, Trash2 } from 'lucide-react';
 import client from '../api/client';
 import { useToastStore } from '../stores/toastStore';
 import { EmptyState } from '../components/ui/Feedback';
+import { KirbyTitleIcon, KirbyCornerSticker } from '../components/theme/KirbyDecorations';
 
 interface Idea {
   id: string;
@@ -73,7 +74,7 @@ export default function InspirationPage() {
   return (
     <div>
       <h2 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-        <Lightbulb className="h-6 w-6 text-amber-500" />
+        <KirbyTitleIcon icon={Lightbulb} sticker="starCute" className="text-amber-500" />
         灵感记录
       </h2>
       <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">随时记录一闪而过的想法，也可以在飞书中 @机器人 发送消息自动记录</p>
@@ -112,8 +113,9 @@ export default function InspirationPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8, height: 0 }}
-                className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-card-hover dark:border-slate-800 dark:bg-slate-900"
+                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-card-hover dark:border-slate-800 dark:bg-slate-900"
               >
+                <KirbyCornerSticker sticker="bow" className="absolute -right-3 -top-4 h-16 w-16 rotate-12 opacity-25" />
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
                     {idea.source === 'feishu' ? <Smartphone className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
