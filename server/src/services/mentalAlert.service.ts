@@ -88,7 +88,7 @@ export async function getRiskAlerts(userId: string): Promise<any[]> {
         threshold,
         lastSituation: last?.situation || null,
         isPoverty: p.isPoverty,
-        categories: JSON.parse(p.categories || '[]'),
+        categories: (() => { try { return JSON.parse(p.categories || '[]'); } catch { return []; } })(),
         // 附加关注：经济困难 + 心理健康
         extraRisk: p.isPoverty && (p.categories || '').includes('心理健康'),
       });

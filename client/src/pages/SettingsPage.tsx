@@ -136,10 +136,13 @@ export default function SettingsPage() {
           />
           <AccountCard
             email={user?.email || ''} name={profileName}
-            onSave={async (name, password) => {
+            onSave={async (name, password, oldPassword) => {
               const body: Record<string, string> = {};
               if (name) body.name = name;
-              if (password) body.password = password;
+              if (password) {
+                body.password = password;
+                body.oldPassword = oldPassword;
+              }
               await client.put('/users/me', body);
               toast.success('个人信息已更新');
             }}

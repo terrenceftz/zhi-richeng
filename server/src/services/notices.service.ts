@@ -40,6 +40,11 @@ export async function getNoticeById(userId: string, id: string) {
 }
 
 export async function createNotice(userId: string, input: NoticeInput) {
+  // 校验关联任务归属（防跨用户引用他人任务）
+  if (input.taskId) {
+    const task = await prisma.task.findFirst({ where: { id: input.taskId, userId } });
+    if (!task) throw Object.assign(new Error('关联的任务不存在'), { statusCode: 400 });
+  }
   const n = await prisma.notice.create({
     data: {
       userId,
@@ -56,28 +61,45 @@ export async function createNotice(userId: string, input: NoticeInput) {
 
 export async function updateNotice(userId: string, id: string, input: Partial<NoticeInput>) {
   await getNoticeById(userId, id);
-  const data: any = { ...input };
-  if (input.materials !== undefined) data.materials = JSON.stringify(input.materials);
-  if (input.deadline !== undefined) data.deadline = input.deadline ? new Date(input.deadline) : null;
-  delete data.id;
+  // 白名单过滤：禁止改写 userId / createdAt
+  const allowed: (keyof NoticeInput)[] = ['title', 'source', 'deadline', 'materials', 'status', 'taskId'];
+  const data: any = {};
+  for (const k of allowed) {
+    if (input[k] !== undefined) data[k] = input[k];
+  }
+  if (data.materials !== undefined) data.materials = JSON.stringify(data.materials);
+  if (data.deadline !== undefined) {
+    const parsed = data.deadline ? new Date(data.deadline) : null;
+    if (data.deadline && isNaN(parsed!.getTime())) {
+      throw Object.assign(new Error('截止日期格式无效'), { statusCode: 400 });
+    }
+    data.deadline = parsed;
+  }
+  if (data.taskId !== undefined && data.taskId) {
+    const task = await prisma.task.findFirst({ where: { id: data.taskId, userId } });
+    if (!task) throw Object.assign(new Error('关联的任务不存在'), { statusCode: 400 });
+  }
   const n = await prisma.notice.update({ where: { id }, data });
   return parseMaterials(n);
 }
 
-/** 切换单个材料项的「已上报」状态 */
+/** 切换单个材料项的「已上报」状态（事务内重读，防并发覆盖丢失修改） */
 export async function toggleMaterial(userId: string, noticeId: string, index: number, submitted: boolean) {
-  const notice = await getNoticeById(userId, noticeId);
-  const materials: MaterialItem[] = Array.isArray(notice.materials) ? notice.materials : [];
-  if (index < 0 || index >= materials.length) {
-    throw Object.assign(new Error('材料项不存在'), { statusCode: 400 });
-  }
-  materials[index] = { ...materials[index], submitted };
-  // 若全部已上报，自动置为 done；否则若曾完成则回退为 in_progress
-  const allDone = materials.length > 0 && materials.every((m) => !m.required || m.submitted);
-  const status = allDone ? 'done' : notice.status === 'done' ? 'in_progress' : notice.status;
-  const updated = await prisma.notice.update({
-    where: { id: noticeId },
-    data: { materials: JSON.stringify(materials), status },
+  await getNoticeById(userId, noticeId);
+  const updated = await prisma.$transaction(async (tx) => {
+    const fresh = await tx.notice.findFirst({ where: { id: noticeId, userId } });
+    if (!fresh) throw Object.assign(new Error('通知不存在'), { statusCode: 404 });
+    const materials: MaterialItem[] = typeof fresh.materials === 'string' ? JSON.parse(fresh.materials) : fresh.materials;
+    if (index < 0 || index >= materials.length) {
+      throw Object.assign(new Error('材料项不存在'), { statusCode: 400 });
+    }
+    materials[index] = { ...materials[index], submitted };
+    const allDone = materials.length > 0 && materials.every((m) => !m.required || m.submitted);
+    const status = allDone ? 'done' : fresh.status === 'done' ? 'in_progress' : fresh.status;
+    return tx.notice.update({
+      where: { id: noticeId },
+      data: { materials: JSON.stringify(materials), status },
+    });
   });
   return parseMaterials(updated);
 }

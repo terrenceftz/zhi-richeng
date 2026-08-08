@@ -4,7 +4,8 @@ services:
   server:
     build: ./server
     ports:
-      - "3001:3001"
+      # 仅本机可访问（调试用）；公网入口统一走 client 的 nginx（80），避免 token 明文直连 API
+      - "127.0.0.1:3001:3001"
     volumes:
       # 数据库持久化（SQLite 文件位于 /app/prisma）
       - server_data:/app/prisma

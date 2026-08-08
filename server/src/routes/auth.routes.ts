@@ -23,9 +23,18 @@ const registerLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// refresh 频率限制：每 IP 每分钟最多 60 次（防重放爆破）
+const refreshLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { message: '请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.post('/register', registerLimiter, register);
 router.post('/login', loginLimiter, login);
-router.post('/refresh', refresh);
+router.post('/refresh', refreshLimiter, refresh);
 router.post('/logout', authMiddleware, logout);
 
 export default router;

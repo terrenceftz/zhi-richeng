@@ -46,25 +46,26 @@ export async function register(input: RegisterInput): Promise<{ user: PublicUser
   }
 
   const hashed = await hashPassword(input.password);
-  // 首个用户自动成为管理员
-  const userCount = await prisma.user.count();
-  const role = userCount === 0 ? 'admin' : 'user';
 
-  const user = await prisma.user.create({
-    data: { email: input.email, password: hashed, name: input.name, role },
-    select: { id: true, email: true, name: true, role: true },
+  // 建用户 + 判定首用户管理员 + 写入 refresh token：同一事务，杜绝并发双管理员与半初始化状态
+  const user = await prisma.$transaction(async (tx) => {
+    const userCount = await tx.user.count();
+    const created = await tx.user.create({
+      data: { email: input.email, password: hashed, name: input.name, role: userCount === 0 ? 'admin' : 'user' },
+      select: { id: true, email: true, name: true, role: true },
+    });
+    const pair = issueTokens(created.id, created.role);
+    await tx.refreshToken.create({
+      data: {
+        userId: created.id,
+        token: pair.refreshToken,
+        expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
+      },
+    });
+    return { created, pair };
   });
 
-  const tokens = issueTokens(user.id, user.role);
-  await prisma.refreshToken.create({
-    data: {
-      userId: user.id,
-      token: tokens.refreshToken,
-      expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
-    },
-  });
-
-  return { user: toPublicUser(user), tokens };
+  return { user: toPublicUser(user.created), tokens: user.pair };
 }
 
 export async function login(input: LoginInput): Promise<{ user: PublicUser; tokens: TokenPair }> {

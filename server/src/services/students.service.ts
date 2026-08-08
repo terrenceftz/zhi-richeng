@@ -124,10 +124,17 @@ export async function createStudentsBatch(userId: string, inputs: StudentInput[]
 
 export async function updateStudent(userId: string, id: string, input: Partial<StudentInput>) {
   await getStudentById(userId, id);
-  const data: any = { ...input };
-  if (input.tags !== undefined) data.tags = JSON.stringify(input.tags);
-  if (input.birthDate !== undefined) data.birthDate = input.birthDate ? new Date(input.birthDate) : null;
-  delete data.id;
+  // 白名单过滤：仅允许更新可维护字段，禁止改写 userId / createdAt / isMentalTarget（后者的入口是台账 toggle）
+  const allowed: (keyof StudentInput)[] = [
+    'name', 'studentNo', 'className', 'gender', 'birthDate', 'studentType',
+    'idNumber', 'grade', 'hometown', 'phone', 'dormitory', 'address', 'tags', 'remark',
+  ];
+  const data: any = {};
+  for (const k of allowed) {
+    if (input[k] !== undefined) data[k] = input[k];
+  }
+  if (data.tags !== undefined) data.tags = JSON.stringify(data.tags);
+  if (data.birthDate !== undefined) data.birthDate = data.birthDate ? new Date(data.birthDate) : null;
   const s = await prisma.student.update({ where: { id }, data });
   await audit.log(userId, 'student_update', {
     entityType: 'student',

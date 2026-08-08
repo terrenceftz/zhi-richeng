@@ -1,5 +1,6 @@
 import prisma from '../db';
 import * as audit from './audit.service';
+import { parseDateSafe } from './mental.service';
 
 export interface CounselingInput {
   studentId: string;
@@ -29,11 +30,13 @@ export async function createCounseling(userId: string, input: CounselingInput) {
   // 校验学生属于该用户
   const student = await prisma.student.findFirst({ where: { id: input.studentId, userId } });
   if (!student) throw Object.assign(new Error('学生不存在'), { statusCode: 404 });
+  const parsedDate = parseDateSafe(input.date);
+  if (!parsedDate) throw Object.assign(new Error('谈心日期格式无效'), { statusCode: 400 });
   const record = await prisma.counseling.create({
     data: {
       userId,
       studentId: input.studentId,
-      date: new Date(input.date),
+      date: parsedDate,
       type: input.type || '日常',
       content: input.content,
       followUp: input.followUp || null,
@@ -51,10 +54,17 @@ export async function createCounseling(userId: string, input: CounselingInput) {
 export async function updateCounseling(userId: string, id: string, input: Partial<CounselingInput>) {
   const existing = await prisma.counseling.findFirst({ where: { id, userId } });
   if (!existing) throw Object.assign(new Error('记录不存在'), { statusCode: 404 });
-  const data: any = { ...input };
-  if (input.date) data.date = new Date(input.date);
-  delete data.id;
-  delete data.studentId; // 不允许改归属
+  // 白名单过滤：禁止改写 userId / createdAt / studentId（归属不可变）
+  const allowed: (keyof CounselingInput)[] = ['date', 'type', 'content', 'followUp'];
+  const data: any = {};
+  for (const k of allowed) {
+    if (input[k] !== undefined) data[k] = input[k];
+  }
+  if (data.date !== undefined) {
+    const parsed = parseDateSafe(data.date);
+    if (!parsed) throw Object.assign(new Error('谈心日期格式无效'), { statusCode: 400 });
+    data.date = parsed;
+  }
   const record = await prisma.counseling.update({
     where: { id },
     data,

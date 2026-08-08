@@ -18,6 +18,22 @@ export async function getOverview(userId: string) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+  // 逾期任务：截止已过且未完成（含当天 dueTime；无 dueTime 次日 0 点起算）
+  const overdueCandidates = await prisma.task.findMany({
+    where: { userId, status: { not: 'done' }, dueDate: { not: null, lte: todayStart } },
+    select: { dueDate: true, dueTime: true },
+  });
+  const overdueTaskCount = overdueCandidates.filter((t) => {
+    const due = new Date(t.dueDate!);
+    if (t.dueTime) {
+      const [h, m] = t.dueTime.split(':').map(Number);
+      due.setHours(h || 0, m || 0, 0, 0);
+      return now > due;
+    }
+    due.setDate(due.getDate() + 1);
+    return now > due;
+  }).length;
+
   const [
     studentCount,
     mentalTargetCount,
@@ -25,7 +41,6 @@ export async function getOverview(userId: string) {
     mentalRecordCount,
     noticeCount,
     taskCount,
-    overdueTaskCount,
     pendingNoticeCount,
   ] = await Promise.all([
     prisma.student.count({ where: { userId } }),
@@ -34,7 +49,6 @@ export async function getOverview(userId: string) {
     prisma.mentalRecord.count({ where: { userId } }),
     prisma.notice.count({ where: { userId } }),
     prisma.task.count({ where: { userId } }),
-    prisma.task.count({ where: { userId, status: { not: 'done' }, dueDate: { lt: now } } }),
     prisma.notice.count({ where: { userId, status: { not: 'done' } } }),
   ]);
 

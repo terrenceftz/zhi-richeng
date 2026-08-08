@@ -73,21 +73,31 @@ export async function getTaskById(userId: string, taskId: string) {
   return parseTags(task);
 }
 
-/** 逾期任务：截止时间已过且未完成 */
+/** 逾期任务：截止时间已过且未完成（含当天 dueTime；无 dueTime 的任务次日起算逾期） */
 export async function getOverdueTasks(userId: string) {
   const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const tasks = await prisma.task.findMany({
     where: {
       userId,
       status: { not: 'done' },
-      OR: [
-        { dueDate: { lt: now } },
-      ],
+      dueDate: { not: null, lte: today },
     },
     orderBy: [{ dueDate: 'asc' }, { priority: 'asc' }],
     include: { children: true },
   });
-  return parseTagsList(tasks);
+  // JS 侧精确判定：有 dueTime 则到点即逾期；无 dueTime 则次日 0 点起逾期（与前端 isOverdue 一致）
+  const overdue = tasks.filter((t) => {
+    const due = new Date(t.dueDate!);
+    if (t.dueTime) {
+      const [h, m] = t.dueTime.split(':').map(Number);
+      due.setHours(h || 0, m || 0, 0, 0);
+      return now > due;
+    }
+    due.setDate(due.getDate() + 1);
+    return now > due;
+  });
+  return parseTagsList(overdue);
 }
 
 export async function createTask(userId: string, input: CreateTaskInput) {

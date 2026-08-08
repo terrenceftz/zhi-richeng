@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../db';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
-import { hashPassword } from '../utils/password';
+import { hashPassword, comparePassword } from '../utils/password';
 
 const router = Router();
 router.use(authMiddleware);
@@ -23,19 +23,31 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/me', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, password } = req.body;
+    const { name, password, oldPassword } = req.body;
+    // 修改密码必须提供当前密码，防止 access token 被盗后直接改密锁定账号
+    if (password) {
+      if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ message: '密码长度至少6位' });
+      if (!oldPassword || typeof oldPassword !== 'string') {
+        return res.status(400).json({ message: '修改密码需提供原密码' });
+      }
+      const user = await prisma.user.findUnique({ where: { id: req.userId } });
+      if (!user) return res.status(404).json({ message: '用户不存在' });
+      const ok = await comparePassword(oldPassword, user.password);
+      if (!ok) return res.status(400).json({ message: '原密码不正确' });
+    }
     const data: any = {};
     if (name) data.name = String(name).slice(0, 50);
     if (password) {
-      if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ message: '密码长度至少6位' });
       data.password = await hashPassword(password);
+      // 改密成功后吊销该用户全部 refresh token（其它设备强制下线）
+      await prisma.refreshToken.deleteMany({ where: { userId: req.userId } });
     }
-    const user = await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: req.userId },
       data,
       select: PUBLIC_FIELDS,
     });
-    res.json({ user });
+    res.json({ user: updated });
   } catch (err) {
     next(err);
   }

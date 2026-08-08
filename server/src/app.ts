@@ -17,10 +17,19 @@ import mentalRoutes from './routes/mental.routes';
 import statsRoutes from './routes/stats.routes';
 import bingRoutes from './routes/bing.routes';
 import auditRoutes from './routes/audit.routes';
+import helmet from 'helmet';
 
 const app = express();
 
-app.set('trust proxy', 1);
+// 生产环境在可信反向代理（nginx）之后才启用 trust proxy；
+// 否则 X-Forwarded-For 可被客户端伪造从而绕过 express-rate-limit 的 IP 限流
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+// 安全响应头：X-Content-Type-Options / X-Frame-Options / Referrer-Policy 等
+// 关闭 CSP 以免影响 Vite 开发热更新与第三方脚本注入
+app.use(helmet({ contentSecurityPolicy: false }));
 
 // 请求日志：开发环境用 dev 格式，生产环境用 combined
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
