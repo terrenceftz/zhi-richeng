@@ -494,6 +494,7 @@ function FollowUpTimeline({ studentId, records, onChanged }: {
 }) {
   const toast = useToastStore();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [situation, setSituation] = useState('');
   const [action, setAction] = useState('');
@@ -502,6 +503,31 @@ function FollowUpTimeline({ studentId, records, onChanged }: {
   // AI 台账智囊
   const [advice, setAdvice] = useState('');
   const [adviceLoading, setAdviceLoading] = useState(false);
+
+  /** 本地日期格式化（避免 UTC 时区偏移一天） */
+  const fmtLocalDate = (d?: string | null) => {
+    if (!d) return '';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  };
+
+  /** 进入编辑模式：回填表单 */
+  const startEdit = (r: MentalRecord) => {
+    setEditingId(r.id);
+    setDate(fmtLocalDate(r.date));
+    setSituation(r.situation || '');
+    setAction(r.action || '');
+    setFollowUp(r.followUp || '');
+    setFollowUpDate(fmtLocalDate(r.followUpDate));
+    setShowForm(true);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setSituation(''); setAction(''); setFollowUp(''); setFollowUpDate('');
+    setShowForm(false);
+  };
 
   const loadAdvice = async () => {
     setAdviceLoading(true);
@@ -520,13 +546,20 @@ function FollowUpTimeline({ studentId, records, onChanged }: {
     e.preventDefault();
     if (!situation.trim()) return;
     try {
-      await mentalApi.createMentalRecord({
+      const payload = {
         studentId, date, situation: situation.trim(),
         action: action.trim() || undefined, followUp: followUp.trim() || undefined,
         followUpDate: followUpDate || undefined,
-      });
-      toast.success('已添加跟进记录');
-      setSituation(''); setAction(''); setFollowUp(''); setFollowUpDate(''); setShowForm(false);
+      };
+      if (editingId) {
+        await mentalApi.updateMentalRecord(editingId, payload);
+        toast.success('跟进记录已更新');
+      } else {
+        await mentalApi.createMentalRecord(payload);
+        toast.success('已添加跟进记录');
+      }
+      setSituation(''); setAction(''); setFollowUp(''); setFollowUpDate('');
+      setEditingId(null); setShowForm(false);
       await onChanged();
     } catch {
       toast.error('保存失败');
@@ -572,6 +605,16 @@ function FollowUpTimeline({ studentId, records, onChanged }: {
 
       {showForm && (
         <form onSubmit={submit} className="mb-4 space-y-3 rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-500/30 dark:bg-red-500/5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-red-600 dark:text-red-300">
+              {editingId ? '✏️ 编辑跟进记录' : '新增跟进记录'}
+            </p>
+            {editingId && (
+              <button type="button" onClick={cancelEdit} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                取消编辑
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label="跟进日期" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             <Input label="下次跟进日期（选填）" type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} hint="每月 15 号报送，寒暑假不计" />
@@ -579,7 +622,7 @@ function FollowUpTimeline({ studentId, records, onChanged }: {
           <Textarea label="跟进情况" value={situation} onChange={(e) => setSituation(e.target.value)} required placeholder="本次跟进了解到的情况..." />
           <Textarea label="跟进措施" value={action} onChange={(e) => setAction(e.target.value)} placeholder="本次采取的措施..." />
           <Input label="下一步计划（选填）" value={followUp} onChange={(e) => setFollowUp(e.target.value)} placeholder="下次跟进安排" />
-          <Button type="submit" size="sm">保存</Button>
+          <Button type="submit" size="sm">{editingId ? '保存修改' : '保存'}</Button>
         </form>
       )}
 
@@ -593,7 +636,10 @@ function FollowUpTimeline({ studentId, records, onChanged }: {
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   {new Date(r.date).toLocaleDateString('zh-CN')}
                 </span>
-                <button onClick={() => handleDelete(r.id)} className="text-xs text-slate-400 hover:text-red-500">删除</button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => startEdit(r)} className="text-xs text-slate-400 hover:text-brand-500">编辑</button>
+                  <button onClick={() => handleDelete(r.id)} className="text-xs text-slate-400 hover:text-red-500">删除</button>
+                </div>
               </div>
               <p className="text-sm text-slate-700 dark:text-slate-200">{r.situation}</p>
               {r.action && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">措施：{r.action}</p>}
