@@ -11,6 +11,7 @@ import ReminderCard from '../components/settings/ReminderCard';
 import DigestCard from '../components/settings/DigestCard';
 import AccountCard from '../components/settings/AccountCard';
 import BackupCard from '../components/settings/BackupCard';
+import MigrationCard from '../components/settings/MigrationCard';
 import AboutCard from '../components/settings/AboutCard';
 import UsersCard from '../components/settings/UsersCard';
 import AuditLogCard from '../components/settings/AuditLogCard';
@@ -154,6 +155,7 @@ export default function SettingsPage() {
         {user?.role === 'admin' && <UsersCard />}
         {user?.role === 'admin' && <AuditLogCard />}
         {user?.role === 'admin' && <BackupCard />}
+        {user?.role === 'admin' && <MigrationCard />}
 
         <AboutCard />
       </div>

@@ -49,9 +49,9 @@ export async function updateStudentStatus(id: string, status: string): Promise<S
   return data.student;
 }
 
-export async function importStudents(students: Partial<Student>[]): Promise<{ created: number; updated: number; message: string }> {
+export async function importStudents(students: Partial<Student>[]): Promise<{ created: number; updated: number; skipped: number; message: string }> {
   const { data } = await client.post('/students/import', { students });
-  return { created: data.created || 0, updated: data.updated || 0, message: data.message || '' };
+  return { created: data.created || 0, updated: data.updated || 0, skipped: data.skipped || 0, message: data.message || '' };
 }
 
 /** 学生扩展字段配置（fields/presets/builtins） */

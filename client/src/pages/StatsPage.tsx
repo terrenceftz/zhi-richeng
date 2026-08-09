@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, Heart, MessageSquareText, ClipboardList, AlertTriangle, BellRing, GraduationCap, Sparkles } from 'lucide-react';
+import { BarChart3, Heart, MessageSquareText, ClipboardList, AlertTriangle, BellRing, GraduationCap, Sparkles, Flag, Download } from 'lucide-react';
 import * as statsApi from '../api/stats';
 import type { StatsData } from '../api/stats';
 import Card from '../components/ui/Card';
@@ -14,6 +14,7 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true);
   const [insight, setInsight] = useState('');
   const [insightLoading, setInsightLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -37,13 +38,27 @@ export default function StatsPage() {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await statsApi.exportStatsExcel();
+      toast.success('人数统计表已导出');
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '导出失败';
+      toast.error(msg);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) return <LoadingState text="统计数据加载中..." />;
   if (!data) return <Card><p className="py-8 text-center text-sm text-slate-400">暂无数据</p></Card>;
 
   const { overview, studentDist, mentalDist } = data;
 
   const kpis = [
-    { label: '学生总数', value: overview.studentCount, icon: GraduationCap, color: 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300', to: '/students' },
+    { label: '学生总数', value: overview.studentCount, sub: `不含澳门班 · 澳门班 ${overview.aomenClassCount} 人（单列）`, icon: GraduationCap, color: 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300', to: '/students' },
+    { label: '澳门班', value: overview.aomenClassCount, sub: '单独统计口径', icon: Flag, color: 'bg-pink-50 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300' },
     { label: '台账学生', value: overview.mentalTargetCount, icon: Heart, color: 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-300', to: '/mental' },
     { label: '谈心记录', value: overview.counselingCount, icon: MessageSquareText, color: 'bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300' },
     { label: '台账跟进记录', value: overview.mentalRecordCount, icon: BarChart3, color: 'bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300' },
@@ -53,10 +68,16 @@ export default function StatsPage() {
 
   return (
     <div>
-      <h2 className="mb-6 flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-        <KirbyTitleIcon icon={BarChart3} sticker="starCute" className="text-brand-500" />
-        数据看板
-      </h2>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+          <KirbyTitleIcon icon={BarChart3} sticker="starCute" className="text-brand-500" />
+          数据看板
+        </h2>
+        <Button size="sm" variant="secondary" onClick={handleExport} disabled={exporting}>
+          <Download className="mr-1 h-4 w-4" />
+          {exporting ? '导出中...' : '导出人数统计表'}
+        </Button>
+      </div>
 
       {/* AI 看板解读 */}
       <Card className="mb-6 border-violet-200 dark:border-violet-500/30">
@@ -79,7 +100,7 @@ export default function StatsPage() {
       </Card>
 
       {/* KPI 卡片 */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
         {kpis.map((k) => {
           const Icon = k.icon;
           return (
@@ -89,6 +110,7 @@ export default function StatsPage() {
               </div>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{k.value}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">{k.label}</p>
+              {k.sub && <p className="mt-0.5 text-[10px] leading-tight text-slate-400 dark:text-slate-500">{k.sub}</p>}
             </Card>
           );
         })}
@@ -113,13 +135,33 @@ export default function StatsPage() {
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* 学生分布 */}
+        {/* 人数统计表（对齐在读人数报送表；澳门班不计入，单列口径） */}
+        <Card className="lg:col-span-2">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">在读人数统计（不含澳门班）</h3>
+            <span className="text-xs text-slate-400">澳门班 {overview.aomenClassCount} 人单列 · 境外生分生源地见下方各列</span>
+          </div>
+          <HeadcountTable rows={data.headcount} />
+          {/* 表格下方注脚：休学人数（状态维度，不计入在读统计） */}
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <span>
+              休学 <span className="font-semibold text-amber-600 dark:text-amber-300">{overview.suspendedCount}</span> 人
+            </span>
+            <span>· 休学/不在籍不计入上表在读统计</span>
+          </div>
+        </Card>
+
+        {/* 性别分布（年级/类型/学历已在上方人数统计表中展示） */}
         <Card>
-          <h3 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100">学生分布</h3>
-          <div className="space-y-4">
-            <DistBar title="按年级" items={studentDist.byGrade} color="bg-brand-500" />
-            <DistBar title="按类型" items={studentDist.byType} color="bg-sky-500" />
-            <DistBar title="按性别" items={studentDist.byGender} color="bg-emerald-500" />
+          <h3 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100">性别分布</h3>
+          <DistBar items={studentDist.byGender} color="bg-emerald-500" />
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {studentDist.byGender.map((g) => (
+              <div key={g.label} className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50">
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{g.count}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{g.label}</p>
+              </div>
+            ))}
           </div>
         </Card>
 
@@ -201,6 +243,100 @@ function TrendChart({ title, items, color }: { title: string; items: statsApi.Tr
             <span className="text-[10px] text-slate-400">{i.label}</span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** 人数统计表（现代数据表风格：玻璃粘性表头 · 分组层级 · 占比迷你进度条） */
+function HeadcountTable({ rows }: { rows: statsApi.HeadcountRow[] }) {
+  // 占比填充色：越高越暖，直观反映境外生比例
+  const rateFill = (rate: number) =>
+    rate >= 0.3 ? 'bg-amber-500' : rate >= 0.15 ? 'bg-brand-500' : 'bg-slate-400 dark:bg-slate-500';
+  // 单元格：0 弱化、非零正常
+  const cell = (v: number) =>
+    v === 0 ? 'text-slate-300 dark:text-slate-600' : 'text-slate-600 dark:text-slate-300';
+  // 左竖线分隔：境内 / 境外生组 / 占比
+  const leftBar = 'before:absolute before:left-0 before:top-1/2 before:h-5 before:-translate-y-1/2 before:w-px before:bg-slate-200 dark:before:bg-slate-700';
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-700/60">
+      <div className="max-h-[560px] overflow-auto">
+        <table className="w-full min-w-[920px] border-collapse text-xs">
+          <thead className="sticky top-0 z-10">
+            {/* 第一层表头 */}
+            <tr className="bg-white text-slate-500 shadow-[0_1px_0_0_rgb(0_0_0/0.06)] dark:bg-slate-900 dark:text-slate-400 dark:shadow-[0_1px_0_0_rgb(255_255_255/0.06)]">
+              <th rowSpan={2} className="px-3 py-2 text-left font-semibold">类型</th>
+              <th rowSpan={2} className="px-3 py-2 text-left font-semibold">年级</th>
+              <th rowSpan={2} className="px-3 py-2 text-right font-semibold">总计</th>
+              <th rowSpan={2} className={`relative px-3 py-2 text-right font-semibold ${leftBar}`}>境内生</th>
+              <th rowSpan={2} className={`relative px-3 py-2 text-right font-semibold ${leftBar}`}>境外生</th>
+              <th colSpan={5} className={`relative px-3 py-1.5 text-center font-semibold text-slate-400 dark:text-slate-500 ${leftBar}`}>
+                境外生来源构成
+              </th>
+              <th rowSpan={2} className={`relative px-3 py-2 text-right font-semibold ${leftBar}`}>境外占比</th>
+              <th rowSpan={2} className={`relative px-3 py-2 text-left font-semibold ${leftBar}`}>备注</th>
+            </tr>
+            {/* 第二层：来源 5 列 */}
+            <tr className="bg-white text-slate-400 dark:bg-slate-900 dark:text-slate-500">
+              <th className="px-2 py-1.5 text-right font-medium">香港</th>
+              <th className="px-2 py-1.5 text-right font-medium">澳门</th>
+              <th className="px-2 py-1.5 text-right font-medium">台湾</th>
+              <th className="px-2 py-1.5 text-right font-medium">华侨</th>
+              <th className="px-2 py-1.5 text-right font-medium">留学生</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const isSchool = r.label === '学院总计';
+              const isGroupTotal = r.label === '本科总计' || r.label === '研究生总计';
+              const rowCls = isSchool
+                ? 'border-t-2 border-brand-200 bg-gradient-to-r from-brand-50/80 to-transparent font-bold text-slate-900 dark:border-brand-500/40 dark:from-brand-500/10 dark:text-slate-100'
+                : isGroupTotal
+                  ? 'border-t border-slate-200 bg-slate-50/70 font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-200'
+                  : 'text-slate-700 hover:bg-slate-50/60 dark:text-slate-300 dark:hover:bg-slate-800/25';
+              return (
+                <tr key={r.label} className={`${rowCls} border-b border-slate-100/70 transition-colors dark:border-slate-800/60`}>
+                  {/* 类型：汇总行用品牌小标签；明细行普通 */}
+                  <td className="px-3 py-2">
+                    {isSchool ? (
+                      <span className="rounded-md bg-brand-600 px-1.5 py-0.5 text-[10px] text-white">学院</span>
+                    ) : isGroupTotal ? (
+                      <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{r.type}</span>
+                    ) : (
+                      <span className="text-slate-400 dark:text-slate-500">{r.type}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{r.label}</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-800 dark:text-slate-100">{r.total}</td>
+                  <td className={`relative px-3 py-2 text-right tabular-nums ${leftBar} text-slate-600 dark:text-slate-300`}>{r.domestic}</td>
+                  {/* 境外总计：品牌色突出 */}
+                  <td className={`relative px-3 py-2 text-right tabular-nums ${leftBar} font-bold text-brand-600 dark:text-brand-300`}>{r.overseas}</td>
+                  <td className={`px-2 py-2 text-right tabular-nums ${cell(r.hk)}`}>{r.hk}</td>
+                  <td className={`px-2 py-2 text-right tabular-nums ${cell(r.macau)}`}>{r.macau}</td>
+                  <td className={`px-2 py-2 text-right tabular-nums ${cell(r.taiwan)}`}>{r.taiwan}</td>
+                  <td className={`px-2 py-2 text-right tabular-nums ${cell(r.huaqiao)}`}>{r.huaqiao}</td>
+                  <td className={`px-2 py-2 text-right tabular-nums ${cell(r.liuxue)}`}>{r.liuxue}</td>
+                  {/* 境外占比：迷你进度条 + 数值 */}
+                  <td className={`relative px-3 py-2 ${leftBar}`}>
+                    <div className="flex items-center justify-end gap-2">
+                      <div className="h-1.5 w-14 overflow-hidden rounded-full bg-slate-200/70 dark:bg-slate-700/60">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${rateFill(r.rate)}`}
+                          style={{ width: `${Math.min(100, r.rate * 100)}%` }}
+                        />
+                      </div>
+                      <span className="w-11 text-right tabular-nums text-slate-500 dark:text-slate-400">{(r.rate * 100).toFixed(1)}%</span>
+                    </div>
+                  </td>
+                  <td className={`relative max-w-[220px] truncate px-3 py-2 text-slate-400 dark:text-slate-500 ${leftBar}`} title={r.countries.join('、')}>
+                    {r.countries.join('、')}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

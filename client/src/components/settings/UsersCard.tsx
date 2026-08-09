@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Trash2, UserPlus, Save } from 'lucide-react';
+import { Users, Trash2, UserPlus, Save, KeyRound } from 'lucide-react';
 import client from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import { useToastStore } from '../../stores/toastStore';
@@ -45,6 +45,9 @@ export default function UsersCard() {
   const [collegeDraft, setCollegeDraft] = useState<Record<string, string>>({});
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ email: '', name: '', password: '', role: 'user' as UserRole, college: '' });
+  const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
+  const [resetPwd, setResetPwd] = useState('');
+  const [resetting, setResetting] = useState(false);
 
   const load = async () => {
     try {
@@ -147,6 +150,27 @@ export default function UsersCard() {
     }
   };
 
+  const resetPassword = async () => {
+    if (!resetTarget) return;
+    if (!resetPwd || resetPwd.length < 8) {
+      toast.error('新密码至少 8 位');
+      return;
+    }
+    setResetting(true);
+    try {
+      await client.put(`/users/${resetTarget.id}/password`, { password: resetPwd });
+      toast.success(`已重置 ${resetTarget.name} 的密码（该用户需重新登录）`);
+      setResetTarget(null);
+      setResetPwd('');
+      await load();
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '重置失败';
+      toast.error(msg);
+    } finally {
+      setResetting(false);
+    }
+  };
+
   // 非管理员：不展示管理入口
   if (!isAdmin) return null;
 
@@ -180,16 +204,16 @@ export default function UsersCard() {
           const draft = collegeDraft[u.id] ?? u.college ?? '';
           const dirty = (draft || '').trim() !== (u.college || '');
           return (
-            <div key={u.id} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800">
+            <div key={u.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800">
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{u.name}</p>
                   {u.id === user?.id && <Badge tone="blue">当前</Badge>}
                   <Badge tone={badge.tone}>{badge.label}</Badge>
                 </div>
                 <p className="truncate text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-1">
                   <input
                     value={draft}
@@ -229,6 +253,14 @@ export default function UsersCard() {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 )}
+                <button
+                  onClick={() => { setResetTarget(u); setResetPwd(''); }}
+                  aria-label="重置密码"
+                  title="重置密码（该用户需重新登录）"
+                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/10"
+                >
+                  <KeyRound className="h-4 w-4" />
+                </button>
               </div>
             </div>
           );
@@ -251,7 +283,7 @@ export default function UsersCard() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">初始密码</label>
-            <input type="password" className={`${inputCls} w-full px-3 py-2 text-sm`} value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} placeholder="至少 6 位" />
+            <input type="password" className={`${inputCls} w-full px-3 py-2 text-sm`} value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} placeholder="至少 8 位" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -270,6 +302,32 @@ export default function UsersCard() {
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setShowCreate(false)}>取消</Button>
             <Button onClick={createUser} disabled={saving}>{saving ? '创建中...' : '创建账户'}</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 重置密码 */}
+      <Modal open={!!resetTarget} title={resetTarget ? `重置密码 · ${resetTarget.name}` : ''} onClose={() => setResetTarget(null)}>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            为 <span className="font-medium text-slate-700 dark:text-slate-200">{resetTarget?.email}</span> 设置新密码。
+            重置后该用户需重新登录，其它设备将被强制下线。
+          </p>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">新密码</label>
+            <input
+              type="password"
+              autoFocus
+              className={`${inputCls} w-full px-3 py-2 text-sm`}
+              value={resetPwd}
+              onChange={(e) => setResetPwd(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') resetPassword(); }}
+              placeholder="至少 8 位"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setResetTarget(null)}>取消</Button>
+            <Button onClick={resetPassword} disabled={resetting}>{resetting ? '重置中...' : '确认重置'}</Button>
           </div>
         </div>
       </Modal>

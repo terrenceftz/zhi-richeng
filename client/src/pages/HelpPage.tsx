@@ -1,4 +1,4 @@
-import { Bot, BookOpenText, MessageCircleQuestion, Lightbulb, CalendarClock, HeartHandshake, Search, Newspaper, Link2 } from 'lucide-react';
+import { Bot, BookOpenText, MessageCircleQuestion, Lightbulb, CalendarClock, HeartHandshake, Search, Newspaper, BarChart3, UserCheck, Link2 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { KirbyTitleIcon } from '../components/theme/KirbyDecorations';
@@ -63,6 +63,28 @@ const commands: Command[] = [
       { say: '查一下张晨睿', result: '📋 张晨睿 · 2022级法学4班 · 境内生 · 电话：138xxxx · 台账：是（一级）' },
       { say: '台账学生列表', result: '📋 心理台账学生（25 人）：张晨睿（一级）、...' },
       { say: '2024级法学1班有哪些学生', result: '📋 2024级法学1班（32 人）：...' },
+    ],
+  },
+  {
+    icon: UserCheck,
+    title: '学生状态变更',
+    desc: '发消息即可把学生设为休学 / 复学 / 毕业 / 退学，状态联动统计口径（休学不计入在读与统计，不在籍封存只读）。',
+    tone: 'amber',
+    tips: ['支持「张三 休学」「给李四办退学」「复学 王五」等格式', '休学/不在籍不计入在籍人数与统计，不参与台账跟进/谈心提醒', '不在籍（毕业/退学）后学生封存只读，历史台账/谈心记录保留'],
+    examples: [
+      { say: '张三 休学', result: '✅ 已将 张三 状态更新为「休学」\n休学期间不计入在籍人数与统计，不参与台账跟进/谈心提醒' },
+      { say: '给李四办退学', result: '✅ 已将 李四 状态更新为「不在籍」\n该学生已封存，仅可查询；其历史台账/谈心记录保留' },
+      { say: '王五 复学', result: '✅ 已将 王五 状态更新为「在学」' },
+    ],
+  },
+  {
+    icon: BarChart3,
+    title: '人数统计查询',
+    desc: '发送「人数统计」等关键词，机器人返回当前可见范围内的在读人数统计：学生总数、澳门班（单列）、休学、境外生分生源地、学历类别与台账概况。',
+    tone: 'blue',
+    examples: [
+      { say: '人数统计', result: '📊 在读人数统计（不含澳门班）\n学生总数 1000 人（境内 770 · 境外 230）\n澳门班 83 人（单列） · 休学 2 人\n境外生来源：中国香港 180 ｜ 中国澳门 12 …' },
+      { say: '境外生统计', result: '📊 境外生 230 人：中国香港 180 ｜ 中国澳门 12 ｜ 中国台湾 21 ｜ 华侨 14 ｜ 留学生 3' },
     ],
   },
   {

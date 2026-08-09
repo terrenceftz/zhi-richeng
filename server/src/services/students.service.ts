@@ -227,15 +227,17 @@ export async function setStudentStatus(ctx: UserCtx, id: string, status: string)
 export interface UpsertResult {
   created: number;
   updated: number;
+  skipped: number;
 }
 
 /**
  * 批量导入（覆盖更新）：按「学号 或 证件号」匹配本学院已有学生，
  * 命中则覆盖更新（保留 userId/isMentalTarget/college），未命中则新建。
+ * 不在籍（封存）学生仅可查询，批量导入跳过不修改。
  */
 export async function upsertStudents(ctx: UserCtx, inputs: StudentInput[]): Promise<UpsertResult> {
   const scope = visibleStudentWhere(ctx);
-  const result: UpsertResult = { created: 0, updated: 0 };
+  const result: UpsertResult = { created: 0, updated: 0, skipped: 0 };
 
   // 文件内按学号/证件号去重（同一文件重复只处理首条，后续跳过避免重复建行）
   const seen = new Set<string>();
@@ -255,7 +257,7 @@ export async function upsertStudents(ctx: UserCtx, inputs: StudentInput[]): Prom
       const matchNo = String(input.studentNo || '').trim();
       const matchId = String(input.idNumber || '').trim();
 
-      let existing: { id: string } | null = null;
+      let existing: { id: string; studentStatus: string } | null = null;
       if (matchNo || matchId) {
         const where: any = { ...scope };
         if (matchNo && matchId) {
@@ -265,10 +267,15 @@ export async function upsertStudents(ctx: UserCtx, inputs: StudentInput[]): Prom
         } else {
           where.idNumber = matchId;
         }
-        existing = await tx.student.findFirst({ where, select: { id: true } });
+        existing = await tx.student.findFirst({ where, select: { id: true, studentStatus: true } });
       }
 
       if (existing) {
+        // 不在籍（封存）学生仅可查询，导入不改写其任何字段
+        if (existing.studentStatus === 'inactive') {
+          result.skipped++;
+          continue;
+        }
         const data = buildUpdateData(input);
         if (!isAdmin(ctx.role)) delete data.college; // 普通用户导入不得改学院归属
         await tx.student.update({ where: { id: existing.id }, data });
@@ -283,7 +290,7 @@ export async function upsertStudents(ctx: UserCtx, inputs: StudentInput[]): Prom
   if (inputs.length > 0) {
     await audit.log(ctx.userId!, 'student_import', {
       entityType: 'student',
-      detail: `导入学生：新建 ${result.created} 人，更新 ${result.updated} 人（文件内去重跳过 ${inputs.length - uniqueInputs.length} 条）`,
+      detail: `导入学生：新建 ${result.created} 人，更新 ${result.updated} 人${result.skipped > 0 ? `，跳过封存 ${result.skipped} 人` : ''}（文件内去重跳过 ${inputs.length - uniqueInputs.length} 条）`,
     });
   }
   return result;

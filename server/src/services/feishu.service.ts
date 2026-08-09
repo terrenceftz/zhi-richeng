@@ -7,6 +7,7 @@ import { formatTaskCard } from './taskFormat';
 import { handleStudentQuery } from './studentQuery.service';
 import { handleMentalFollowUp } from './mentalFollowUp.service';
 import { handleStudentStatusChange } from './studentStatusFollowUp.service';
+import { handleStatsQuery } from './statsQuery.service';
 
 
 let wsClient: Lark.WSClient | null = null;
@@ -190,6 +191,13 @@ export async function startFeishuClient(): Promise<void> {
             const studentReply = await handleStudentQuery(targetUserId, text);
             if (studentReply) {
               await sendReply(client, chatId, studentReply);
+              return;
+            }
+
+            // 人数统计查询：在读人数 / 境外生分生源地 / 学历类别（澳门班单列口径）
+            const statsReply = await handleStatsQuery(targetUserId, text);
+            if (statsReply) {
+              await sendReply(client, chatId, statsReply);
               return;
             }
 

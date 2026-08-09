@@ -575,6 +575,7 @@ export async function statsInsight(summary: string): Promise<string> {
         role: 'system',
         content:
           '你是高校辅导员工作数据解读助手。根据系统统计数据，生成一份 150 字以内的中文工作解读。' +
+          '统计口径说明：学生总数/境内生/境外生/各分布数字均不含「澳门班」学生；澳门班人数由 aomenClassCount 单独给出（单独口径）；休学人数由 suspendedCount 给出，不计入在读统计；境外生分生源地（hk/macau/taiwan/huaqiao/liuxue）合计等于境外生总数。解读时必须遵循以上口径，不得把澳门班计入学生总数或境外生。' +
           '结构：1) 整体概况（一句话）2) 需要关注的风险点 3) 建议优先处理的动作。' +
           '语言平实、面向辅导员工作实际，不要重复罗列所有数字，只提炼重点。',
       },

@@ -22,6 +22,8 @@ export default function MentalPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 12;
   const [editing, setEditing] = useState<Student | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [alerts, setAlerts] = useState<RiskAlert[]>([]);
@@ -61,6 +63,11 @@ export default function MentalPage() {
     if (levelFilter && String(s.mentalProfile?.concernLevel || 1) !== levelFilter) return false;
     return true;
   });
+
+  // 分页：过滤后切页展示（每页 PAGE_SIZE 人），筛选条件变化回到第一页
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [q, levelFilter]);
 
   const handleExport = async () => {
     try {
@@ -254,8 +261,9 @@ export default function MentalPage() {
       ) : filtered.length === 0 ? (
         <Card><EmptyState title="没有匹配的台账学生" hint="换个关键词或级别试试" icon={<Search className="h-6 w-6" />} /></Card>
       ) : (
+        <>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((s) => {
+          {pageItems.map((s) => {
             const p = s.mentalProfile;
             const level = p?.concernLevel || 1;
             return (
@@ -305,6 +313,18 @@ export default function MentalPage() {
             );
           })}
         </div>
+        {totalPages > 1 && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <span>
+              共 <span className="font-semibold text-slate-700 dark:text-slate-200">{filtered.length}</span> 人 · 第 {page} / {totalPages} 页
+            </span>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>上一页</Button>
+              <Button size="sm" variant="secondary" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>下一页</Button>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* 档案编辑抽屉 */}

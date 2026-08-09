@@ -231,10 +231,11 @@ router.post('/import', upload.single('file'), async (req: Request, res: Response
         extras: s.extras && typeof s.extras === 'object' ? s.extras : undefined, // 自定义扩展字段
       }));
 
-    // 覆盖更新导入：按学号/证件号匹配已存在学生则覆盖，否则新建
+    // 覆盖更新导入：按学号/证件号匹配已存在学生则覆盖，否则新建；不在籍（封存）学生跳过
     const result = await studentsService.upsertStudents(ctxOf(req), cleaned);
-    const msg = `已导入 ${result.created} 名新增学生，更新 ${result.updated} 名已有学生（按学号/证件号匹配覆盖）`;
-    res.status(201).json({ created: result.created, updated: result.updated, message: msg });
+    const skipMsg = result.skipped > 0 ? `，跳过 ${result.skipped} 名封存学生（不在籍）` : '';
+    const msg = `已导入 ${result.created} 名新增学生，更新 ${result.updated} 名已有学生（按学号/证件号匹配覆盖）${skipMsg}`;
+    res.status(201).json({ created: result.created, updated: result.updated, skipped: result.skipped, message: msg });
   } catch (err) {
     next(err);
   }

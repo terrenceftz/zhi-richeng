@@ -5,6 +5,7 @@ export const AUDIT_ACTIONS = {
   login: '登录',
   register: '注册',
   user_create: '后台创建账户',
+  user_password_reset: '重置用户密码',
   student_create: '新增学生',
   student_update: '修改学生',
   student_delete: '删除学生',
@@ -24,6 +25,9 @@ export const AUDIT_ACTIONS = {
   export_report: '导出报送表',
   backup_download: '下载备份',
   backup_restore: '恢复备份',
+  export_migrate: '导出迁移备份',
+  import_migrate: '导入迁移备份',
+  export_stats: '导出人数统计表',
   settings_update: '修改设置',
 } as const;
 

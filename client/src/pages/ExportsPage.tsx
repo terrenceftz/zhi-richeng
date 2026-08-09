@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileSpreadsheet, Users, Heart, ClipboardList, HeartHandshake, Database, Download, CheckCircle2 } from 'lucide-react';
+import { FileSpreadsheet, Users, Heart, ClipboardList, HeartHandshake, Database, PackageOpen, BarChart3, Download, CheckCircle2 } from 'lucide-react';
 import client from '../api/client';
 import * as mentalApi from '../api/mental';
 import * as statsApi from '../api/stats';
@@ -104,6 +104,32 @@ export default function ExportsPage() {
         toast.success('数据快照已导出');
       },
     },
+    {
+      key: 'stats',
+      title: '在读人数统计表',
+      desc: '按报送表结构：本科/研究生×年级、境内/境外、中国香港/澳门/台湾/华侨/留学生、占比与备注（澳门班不计入，单列口径）',
+      icon: BarChart3,
+      tag: 'XLSX',
+      tagTone: 'green',
+      run: async () => {
+        await statsApi.exportStatsExcel();
+        toast.success('人数统计表已导出');
+      },
+    },
+    {
+      key: 'migrate',
+      title: '全量数据迁移包',
+      desc: '全部设置、账号、学生、台账、谈心、日程、通知等数据（JSON）。部署到新服务器后在「设置 → 一键迁移」导入完整恢复',
+      icon: PackageOpen,
+      tag: 'JSON',
+      tagTone: 'amber',
+      run: async () => {
+        const now = new Date();
+        const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+        await downloadBlob('/migrate/export', `数据迁移备份-${ts}.json`);
+        toast.success('迁移备份已导出');
+      },
+    },
   ];
 
   const handleRun = async (item: ExportItem) => {
@@ -169,7 +195,7 @@ export default function ExportsPage() {
           </div>
           <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
             台账相关导出同时支持在「心理台账」页面内直接操作。<br />
-            备份数据库请前往「设置 → 数据备份」。<br />
+            备份数据库请前往「设置 → 数据备份」；全量数据迁移（导入恢复）请前往「设置 → 一键迁移」。<br />
             导出内容均为当前账号数据，仅本人可见。
           </p>
         </Card>

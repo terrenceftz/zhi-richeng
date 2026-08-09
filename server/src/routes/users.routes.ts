@@ -116,6 +116,30 @@ router.delete('/:id', requireAdmin, async (req: Request, res: Response, next: Ne
   }
 });
 
+// 重置用户密码（后台）：仅管理员。改密后吊销该用户 refresh token，强制重新登录
+router.put('/:id/password', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { password } = req.body;
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ message: '密码长度至少 8 位' });
+    }
+    const existing = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, email: true } });
+    if (!existing) return res.status(404).json({ message: '用户不存在' });
+    await prisma.user.update({
+      where: { id: req.params.id },
+      data: { password: await hashPassword(password) },
+    });
+    await prisma.refreshToken.deleteMany({ where: { userId: req.params.id } });
+    await (await import('../services/audit.service')).log(req.userId!, 'user_password_reset', {
+      detail: `重置用户密码 ${existing.email}`,
+      ip: req.ip,
+    });
+    res.json({ message: '密码已重置，该用户需重新登录' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // 调整用户角色/学院（分级）：仅管理员。roles: admin 系统管理员 / dept_admin 院系管理员 / user 普通用户
 router.put('/:id/role', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {

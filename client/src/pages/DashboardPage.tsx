@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { useTaskStore } from '../stores/taskStore';
 import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
+import type { Palette } from '../stores/themeStore';
 import type { Task } from '../types';
 import { getNextHolidayCountdown } from '../utils/holidays';
 import { getTeachingWeek, getBreakCountdown, type SemesterConfig } from '../utils/academicCalendar';
@@ -25,7 +26,15 @@ import { KirbyCornerSticker, KirbyHeroDecorations } from '../components/theme/Ki
 export default function DashboardPage() {
   const { tasks, selectedDate, isLoading, fetchTasks, createTask, deleteTask, setSelectedDate } = useTaskStore();
   const { user } = useAuthStore();
-  const isKirby = useThemeStore((s) => s.palette === 'kirby');
+  const palette = useThemeStore((s) => s.palette);
+  const isKirby = palette === 'kirby';
+
+  // 主题专属首页 banner：仅声明了素材的主题使用本地图，其余主题回退必应每日壁纸。
+  // 新增主题时：把素材放到 client/public/themes/<palette>/banner.jpg，并在此登记一行即可。
+  const THEME_BANNERS: Partial<Record<Palette, string>> = {
+    kirby: '/themes/kirby/banner.jpg',
+  };
+  const themeBanner = THEME_BANNERS[palette];
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -45,13 +54,14 @@ export default function DashboardPage() {
       .catch(() => setOverdueTasks([]));
   }, [tasks]);
 
-  // 拉取必应每日壁纸（失败时保持渐变兜底）
+  // 拉取必应每日壁纸（有主题专属 banner 时跳过；失败时保持渐变兜底）
   useEffect(() => {
+    if (themeBanner) return;
     let alive = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchWallpaper().then((w) => { if (alive) setWallpaper(w); });
     return () => { alive = false; };
-  }, []);
+  }, [themeBanner]);
 
   useEffect(() => {
     const CACHE_KEY = 'zrc_semester_cache';
@@ -132,14 +142,17 @@ export default function DashboardPage() {
   const hour = new Date().getHours();
   const greetingWord = hour < 6 ? '夜深了' : hour < 11 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好';
 
+  // 背景图：主题专属 banner 优先，否则必应每日壁纸（再兜底品牌渐变）
+  const bannerImage = themeBanner || wallpaper?.url;
+
   return (
     <div>
       {/* 问候卡 */}
       <Card className="relative mb-6 min-h-[140px] overflow-hidden !border-0 bg-gradient-to-br from-brand-600 via-brand-700 to-brand-800 text-white shadow-lg shadow-brand-900/20 dark:from-brand-700 dark:via-brand-800 dark:to-slate-900">
-        {/* 必应每日壁纸（无壁纸时保持上方渐变兜底） */}
-        {wallpaper && (
+        {/* 背景图：主题专属 banner / 必应每日壁纸（无图时保持上方渐变兜底） */}
+        {bannerImage && (
           <img
-            src={wallpaper.url}
+            src={bannerImage}
             alt=""
             aria-hidden
             loading="lazy"
@@ -198,8 +211,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 壁纸版权角标 */}
-        {wallpaper?.copyright && (
+        {/* 壁纸版权角标（仅必应壁纸显示） */}
+        {!themeBanner && wallpaper?.copyright && (
           <p className="absolute bottom-2 right-3 z-10 hidden max-w-[55%] truncate text-[10px] text-white/55 lg:block">
             {wallpaper.copyright}
           </p>
