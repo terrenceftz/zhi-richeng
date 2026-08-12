@@ -2,6 +2,12 @@
 
 AI 驱动的高校辅导员智能工作台，覆盖日程任务、学生花名册、谈心谈话、通知与材料上报全流程，集成飞书自动提醒与每日简报。
 
+## 界面预览
+
+![工作台总览](docs/images/screenshot-workbench.png)
+
+![日程与数据看板](docs/images/screenshot-dashboard.png)
+
 ## 功能
 
 ### 核心能力
