@@ -7,7 +7,7 @@ import { visibleStudentWhere, type UserCtx } from '../utils/scope';
  * 隐私保护原则（硬编码白名单）：
  * - 仅提取与心理关怀、学业跟踪相关的字段
  * - 绝不发送：证件号码、手机号、家庭住址、家长联系电话等敏感联系方式
- * - 姓名/学号/班级/年级：校内识别所需，保留
+ * - 绝不发送：学生真实姓名与学号（以「已匿名」代替），仅保留性别/班级/年级等非身份字段
  * - 跟进记录、谈心内容：建议生成的依据，保留
  */
 export interface StudentAiContext {
@@ -40,10 +40,10 @@ export async function buildStudentAiContext(ctx: UserCtx, studentId: string): Pr
   const p = student.mentalProfile;
   const categories = p ? (() => { try { return JSON.parse(p.categories); } catch { return []; } })() : [];
 
-  // ---- 档案摘要（隐私白名单）----
+  // ---- 档案摘要（隐私白名单：不发送真实姓名与学号）----
   const profileParts: string[] = [
-    `姓名：${student.name}`,
-    `学号：${student.studentNo || '无'}`,
+    `姓名：已匿名`,
+    `学号：已隐藏`,
     `性别：${student.gender || '未知'}`,
     `班级：${student.className || '未分班'} / 年级：${student.grade || '未知'} / 学生类型：${student.studentType === 'overseas' ? '境外生' : student.studentType === 'domestic' ? '境内生' : '未知'}`,
   ];
