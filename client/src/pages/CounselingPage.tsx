@@ -489,7 +489,7 @@ function CounselingFormModal({
             </div>
           )}
           <p className="mt-2 text-[11px] text-violet-500 dark:text-violet-400">
-            仅发送脱敏摘要（不包含证件号、手机号、住址、家长电话）
+            仅发送脱敏摘要（学生姓名与学号已匿名；证件号、手机号、住址、家长电话不发送）
           </p>
         </div>
         <div className="space-y-1.5">
