@@ -78,8 +78,9 @@ async function checkAndDigest(): Promise<void> {
 
       if (tasks.length === 0 && overdueTasks.length === 0) continue;
 
-      // 简报内容：开启 AI 时用大模型生成（无 Key 自动回退简单版），关闭时直接用简单版
-      const summary = digestAi ? await generateSummary(tasks, today) : buildSimpleSummary(tasks, today);
+      // 简报内容：开启 AI 且确有今日/待办任务时用大模型生成（无 Key 自动回退简单版）；
+      // 任务列表为空（仅逾期）时直接用简单版，避免大模型对空列表编造不存在的日程
+      const summary = digestAi && tasks.length > 0 ? await generateSummary(tasks, today) : buildSimpleSummary(tasks, today);
       const overdueSection = overdueTasks.length > 0
         ? `\n\n🔴 逾期任务（${overdueTasks.length}）\n${overdueTasks.map((t) =>
             `  ⚠️ ${t.title}${t.dueDate ? `（截止 ${new Date(t.dueDate).toISOString().slice(0, 10)}）` : ''}`
@@ -123,6 +124,10 @@ ${taskList}
 2. 按时间排的关键事项（前3个）
 3. 一句建议（如"上午任务较多，建议优先处理高优事项"）
 
+严格约束：
+- 只能基于任务列表中已有的内容提炼，严禁编造列表中不存在的任务、时间或会议（如"评审会""例会"等）；
+- 若任务列表为空，直接输出"今日暂无安排"，不要虚构任何日程。
+
 直接输出文本，不要JSON。`;
 
     const response = await client.chat.completions.create({
@@ -150,7 +155,7 @@ function buildSimpleSummary(tasks: any[], _today: string): string {
   const todayTasks = tasks.filter((t) => localDateStr(t.dueDate) === _today);
 
   const lines = [
-    `📊 共 ${tasks.length} 个任务，其中 ${high} 个高优先级`,
+    tasks.length === 0 ? '📊 今日无待办安排' : `📊 共 ${tasks.length} 个任务，其中 ${high} 个高优先级`,
     todayTasks.length > 0 ? `📅 今日 ${todayTasks.length} 个事项：` : '',
     ...todayTasks.slice(0, 5).map((t) =>
       `  ${t.priority === 'high' ? '🔥' : '·'} ${t.title}${t.dueTime ? ` ${t.dueTime}` : ''}`
